@@ -32,7 +32,8 @@ for (const size of [0, 1, 1024 * 1024 - 1, 1024 * 1024, 3 * 1024 * 1024 + 17]) {
     const key = keygen();
     await encryptFile(join(d, 'in'), join(d, 'enc'), key);
     const enc = await readFile(join(d, 'enc'));
-    assert.ok(!enc.includes(data.subarray(0, 64)) || size === 0);
+    // A 64-byte plaintext window must not survive in the ciphertext (meaningless for tiny inputs).
+    if (size >= 64) assert.ok(!enc.includes(data.subarray(0, 64)));
     await decryptFile(join(d, 'enc'), join(d, 'out'), key);
     assert.ok(data.equals(await readFile(join(d, 'out'))));
   });
