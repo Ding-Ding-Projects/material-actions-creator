@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Encrypted public builder run</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b0c10}
+a{color:#d4ff3a}a:hover{color:#eaff8f}
+@keyframes macpulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes macrise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes macflow{from{background-position:0% 50%}to{background-position:200% 50%}}
+@keyframes macorb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,-40px) scale(1.18)}}
+@keyframes macorb2{0%,100%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-70px,50px) scale(.9)}}
+.mac-orb{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:-1}
+[data-motion="on"] .mac-orb{animation:macorb 14s ease-in-out infinite}
+[data-motion="on"] .mac-orb + .mac-orb{animation:macorb2 18s ease-in-out infinite}
+[data-motion="on"] section,[data-motion="on"] article,[data-motion="on"] aside,[data-motion="on"] [role="dialog"]{animation:macrise .8s cubic-bezier(.2,.9,.1,1) both}
+[data-motion="on"] section:nth-of-type(2),[data-motion="on"] article:nth-of-type(2),[data-motion="on"] aside{animation-delay:.12s}
+[data-motion="on"] article:nth-of-type(3){animation-delay:.24s}
+[data-motion="on"] button,[data-motion="on"] a,[data-motion="on"] label{transition:transform .3s cubic-bezier(.2,.9,.1,1),filter .25s,background .25s,border-color .25s,box-shadow .3s}
+[data-motion="on"] button:hover,[data-motion="on"] a:hover{transform:translateY(-2px);filter:brightness(1.08)}
+[data-motion="off"] *,[data-motion="off"] *::before,[data-motion="off"] *::after{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div data-motion="{{motionFlag}}" style="isolation: isolate; min-height: 1240px; background: radial-gradient(45% 35% at 85% 6%, rgba(182,156,255,.18), transparent 70%), #0b0c10; color: #eef0f6; font-family: 'Bricolage Grotesque', system-ui, sans-serif; position: relative; overflow: hidden">
+<div class="mac-orb" aria-hidden="true" style="width: 520px; height: 520px; left: -160px; top: -200px; background: {{accent}}; opacity: .16"></div><div class="mac-orb" aria-hidden="true" style="width: 460px; height: 460px; right: -140px; top: 80px; background: #b69cff; opacity: .18"></div>
+  <header style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 20px 48px; border-bottom: 1px solid rgba(255,255,255,.05)">
+    <a href="#" style="color: #a7adc0; text-decoration: none; font-size: 15px">← Runs</a>
+    <span style="font: 700 11px 'JetBrains Mono', monospace; letter-spacing: .12em; text-transform: uppercase; padding: 8px 12px; border-radius: 99px; background: rgba(182,156,255,.14); color: #b69cff">Encrypted public · running</span>
+  </header>
+
+  <main style="max-width: 1340px; margin: 0 auto; padding: 40px 48px 80px; box-sizing: border-box; display: flex; flex-direction: column; gap: 28px">
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-end; justify-content: space-between">
+      <div>
+        <p style="font: 12px 'JetBrains Mono', monospace; color: #8d93a8; margin: 0 0 10px">Ding-Ding-Projects/map-editor @ main → windows-latest</p>
+        <h1 style="font-size: 60px; line-height: .95; letter-spacing: -.045em; margin: 0; font-weight: 800">Build installer</h1>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px">
+        <div style="background: #12141b; border: 1px solid #2c3140; border-radius: 18px; padding: 14px 18px; min-width: 150px">
+          <div style="font: 11px 'JetBrains Mono', monospace; color: #8d93a8; letter-spacing: .1em; text-transform: uppercase">Temp key expires</div>
+          <div style="font: 700 24px 'JetBrains Mono', monospace; color: #ffc857; margin-top: 4px">41:12</div>
+        </div>
+        <div style="background: #12141b; border: 1px solid #2c3140; border-radius: 18px; padding: 14px 18px; min-width: 150px">
+          <div style="font: 11px 'JetBrains Mono', monospace; color: #8d93a8; letter-spacing: .1em; text-transform: uppercase">Elapsed</div>
+          <div style="font: 700 24px 'JetBrains Mono', monospace; margin-top: 4px">6m 05s</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px">
+      <sc-for list="{{stages}}" as="s" hint-placeholder-count="8"><i style="{{s.bar}}"></i></sc-for>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 24px">
+      <section style="flex: 999 1 560px; min-width: 0; background: #12141b; border: 1px solid #2c3140; border-radius: 28px; padding: 12px">
+        <sc-for list="{{stages}}" as="s" hint-placeholder-count="8">
+          <div style="{{s.row}}">
+            <span style="{{s.dot}}"></span>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-weight: 700; font-size: 16px">{{s.title}}</div>
+              <div style="font-size: 14px; color: #a7adc0; margin-top: 2px; line-height: 1.45">{{s.body}}</div>
+            </div>
+            <span style="font: 12px 'JetBrains Mono', monospace; color: #8d93a8; white-space: nowrap">{{s.detail}}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <aside style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+        <div style="background: #12141b; border: 1px solid #2c3140; border-radius: 28px; padding: 24px">
+          <p style="margin: 0 0 14px; font: 600 12px 'JetBrains Mono', monospace; color: #b69cff">WHAT THE PUBLIC CAN SEE</p>
+          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px">
+            <div style="display: flex; justify-content: space-between; gap: 12px"><span>Repository name</span><span style="color: #ffc857">visible</span></div>
+            <div style="display: flex; justify-content: space-between; gap: 12px"><span>Workflow file + run logs</span><span style="color: #ffc857">visible</span></div>
+            <div style="display: flex; justify-content: space-between; gap: 12px"><span>Source code</span><span style="color: #7cf5c8">src.age only</span></div>
+            <div style="display: flex; justify-content: space-between; gap: 12px"><span>Outputs</span><span style="color: #7cf5c8">out.age only</span></div>
+            <div style="display: flex; justify-content: space-between; gap: 12px"><span>Decryption key</span><span style="color: #7cf5c8">Actions secret</span></div>
+          </div>
+          <p style="margin: 16px 0 0; font-size: 13px; line-height: 1.5; color: #a7adc0">Build logs are public. Scripts that echo file contents or paths will show them; secret values are masked.</p>
+        </div>
+        <div style="background: #12141b; border: 1px solid #2c3140; border-radius: 28px; padding: 24px">
+          <p style="margin: 0 0 14px; font: 600 12px 'JetBrains Mono', monospace; color: {{accent}}">OUTPUTS</p>
+          <div style="display: flex; flex-direction: column; gap: 8px; font: 14px 'JetBrains Mono', monospace; color: #8d93a8">
+            <span>MapEditor-Setup-1.4.0.exe · waiting</span>
+            <span>MapEditor-1.4.0.msi · waiting</span>
+          </div>
+        </div>
+        <button type="button" style="border: 1px solid #ff7a6b; background: transparent; color: #ff7a6b; font: inherit; font-weight: 700; font-size: 15px; padding: 14px 18px; border-radius: 18px">Cancel and destroy repository</button>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent": {"editor": "color", "default": "#d4ff3a", "options": ["#d4ff3a", "#7cf5c8", "#b69cff", "#ff9e7a"], "section": "Look"}, "motion": {"editor": "boolean", "default": true, "section": "Look"}, "$preview": {"width": 1440, "height": 1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#d4ff3a';
+    const motion = this.props.motion ?? true;
+    const motionAnim = motion ? 'macpulse 1.4s ease-in-out infinite' : 'none';
+    const motionFlag = motion ? 'on' : 'off';
+    const flow = motion ? 'macflow 1.6s linear infinite' : 'none';
+    const col = { done: accent, active: '#b69cff', pending: '#232733' };
+    const list = [
+      ['done', 'Mint temporary key', 'GitHub App installation token, scoped to one new repository.', '1h lifetime'],
+      ['done', 'Encrypt sources', 'Repository snapshot sealed into src.age with a fresh per-run key.', '38 MB'],
+      ['done', 'Create public repository', 'mac-pub-9c2e with only src.age and the workflow.', 'public'],
+      ['done', 'Store run key as Actions secret', 'Encrypted to the repository’s public key; never committed.', 'MAC_KEY'],
+      ['active', 'Run build scripts', 'Decrypt on the runner, then build\\installer.bat and build\\sign.bat.', 'step 2 of 3'],
+      ['pending', 'Encrypt outputs', 'Outputs sealed into out.age before upload.', ''],
+      ['pending', 'Download and decrypt', 'out.age pulled back here and opened locally.', ''],
+      ['pending', 'Destroy repository and key', 'Repository deleted, installation token revoked.', ''],
+    ];
+    const stages = list.map(([state, title, body, detail]) => ({
+      title, body, detail,
+      bar: 'display:block;height:8px;border-radius:8px;background:' + (state === 'active' ? 'linear-gradient(90deg,#b69cff,' + accent + ',#b69cff);background-size:200% 100%;animation:' + flow : col[state]),
+      dot: 'width:12px;height:12px;border-radius:50%;flex:none;margin-top:5px;box-sizing:border-box;border:2px solid ' + (state === 'pending' ? '#2c3140' : col[state]) + ';background:' + (state === 'done' ? col.done : 'transparent') + (state === 'active' ? ';box-shadow:0 0 0 5px rgba(182,156,255,.2)' : '') + (state === 'active' ? ';animation:' + motionAnim : ''),
+      row: 'display:flex;gap:16px;align-items:flex-start;padding:16px 18px;border-radius:18px;' + (state === 'active' ? 'background:rgba(182,156,255,.08)' : '') + (state === 'pending' ? ';opacity:.6' : ''),
+    }));
+    return { accent, motionAnim, motionFlag, stages };
+  }
+}
+</script>
+</body>
+</html>

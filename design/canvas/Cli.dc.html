@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>mac command line</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#d4ff3a}a:hover{color:#eaff8f}
+@keyframes mactype{from{width:0}to{width:100%}}
+@keyframes macblink{50%{opacity:0}}
+@keyframes macpulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes macrise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes macflow{from{background-position:0% 50%}to{background-position:200% 50%}}
+@keyframes macorb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,-40px) scale(1.18)}}
+@keyframes macorb2{0%,100%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-70px,50px) scale(.9)}}
+.mac-orb{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:-1}
+[data-motion="on"] .mac-orb{animation:macorb 14s ease-in-out infinite}
+[data-motion="on"] .mac-orb + .mac-orb{animation:macorb2 18s ease-in-out infinite}
+[data-motion="on"] section,[data-motion="on"] article,[data-motion="on"] aside,[data-motion="on"] [role="dialog"]{animation:macrise .8s cubic-bezier(.2,.9,.1,1) both}
+[data-motion="on"] section:nth-of-type(2),[data-motion="on"] article:nth-of-type(2),[data-motion="on"] aside{animation-delay:.12s}
+[data-motion="on"] article:nth-of-type(3){animation-delay:.24s}
+[data-motion="on"] button,[data-motion="on"] a,[data-motion="on"] label{transition:transform .3s cubic-bezier(.2,.9,.1,1),filter .25s,background .25s,border-color .25s,box-shadow .3s}
+[data-motion="on"] button:hover,[data-motion="on"] a:hover{transform:translateY(-2px);filter:brightness(1.08)}
+[data-motion="off"] *,[data-motion="off"] *::before,[data-motion="off"] *::after{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div data-motion="{{motionFlag}}" style="isolation: isolate; position: relative; overflow: hidden; width: 1100px; height: 900px; box-sizing: border-box; padding: 56px; background: #0b0c10; color: #eef0f6; font-family: 'Bricolage Grotesque', system-ui, sans-serif; display: flex; flex-direction: column; gap: 24px">
+<div class="mac-orb" aria-hidden="true" style="width: 520px; height: 520px; left: -200px; bottom: -260px; background: {{accent}}; opacity: .16"></div><div class="mac-orb" aria-hidden="true" style="width: 420px; height: 420px; right: -120px; top: -160px; background: #b69cff; opacity: .2"></div>
+  <div>
+    <p style="margin: 0 0 10px; font: 12px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: #8d93a8">Command line</p>
+    <h1 style="margin: 0; font-size: 64px; line-height: .92; letter-spacing: -.045em; font-weight: 800">Everything, from<br><span style="color: {{accent}}">a terminal.</span></h1>
+  </div>
+  <section style="flex: 1; background: #08090c; border: 1px solid #2c3140; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 40px 100px -40px rgba(0,0,0,.9)">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 14px 18px; background: #12141b; border-bottom: 1px solid #1d2029">
+      <i style="width: 12px; height: 12px; border-radius: 50%; background: #ff7a6b"></i><i style="width: 12px; height: 12px; border-radius: 50%; background: #ffc857"></i><i style="width: 12px; height: 12px; border-radius: 50%; background: #7cf5c8"></i>
+      <span style="margin-left: 12px; font: 13px 'JetBrains Mono', monospace; color: #8d93a8">~/map-editor</span>
+    </div>
+    <div style="padding: 22px 26px; font: 15px/1.75 'JetBrains Mono', monospace; color: #cfd3e0; white-space: pre-line; flex: 1"><span style="color: #8d93a8">$</span> mac login
+  1. Open <b>https://github.com/login/device</b>
+  2. Enter the code <span style="color: {{accent}}; font-weight: 700">7F3K-Q9XD</span>
+  3. Approve repo, workflow, delete_repo, read:org
+<span style="color: {{accent}}">✓</span> Signed in as swiftie
+
+<span style="color: #8d93a8">$</span> mac build Ding-Ding-Projects/map-editor --all-scripts --all-workflows --encrypted
+<b>map-editor build</b>  <span style="color: #b69cff">RUNNING</span>  <span style="color: #8d93a8">4f1c9e2a7b</span>
+  <span style="color: {{accent}}">●</span> Mint temporary key  <span style="color: #8d93a8">signed-in session</span>
+  <span style="color: {{accent}}">●</span> Encrypt sources  <span style="color: #8d93a8">1 file · 38 MB</span>
+  <span style="color: {{accent}}">●</span> Create public repository  <span style="color: #8d93a8">mac-pub-9c2e</span>
+  <span style="color: {{accent}}">●</span> Start workflow run  <span style="color: #8d93a8">3 runs</span>
+  <span style="color: #b69cff; animation: {{motionAnim}}">◐</span> Build on GitHub Actions  <span style="color: #8d93a8">2/3 runs finished</span><span style="display: inline-block; width: 9px; height: 18px; margin-left: 6px; vertical-align: -3px; background: {{accent}}; animation: {{cursor}}"></span></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent": {"editor": "color", "default": "#d4ff3a", "options": ["#d4ff3a", "#7cf5c8", "#b69cff", "#ff9e7a"], "section": "Look"}, "motion": {"editor": "boolean", "default": true, "section": "Look"}, "$preview": {"width": 1100, "height": 900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#d4ff3a';
+    const motion = this.props.motion ?? true;
+    const motionAnim = motion ? 'macpulse 1.4s ease-in-out infinite' : 'none';
+    const motionFlag = motion ? 'on' : 'off';
+    const flow = motion ? 'macflow 1.6s linear infinite' : 'none';
+    return { accent, motionAnim, motionFlag, cursor: motion ? 'macblink 1s steps(1) infinite' : 'none' };
+  }
+}
+</script>
+</body>
+</html>

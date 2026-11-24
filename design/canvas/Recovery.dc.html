@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Runs resumed after restart</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#d4ff3a}a:hover{color:#eaff8f}
+@keyframes macpulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes macrise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes macflow{from{background-position:0% 50%}to{background-position:200% 50%}}
+@keyframes macorb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,-40px) scale(1.18)}}
+@keyframes macorb2{0%,100%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-70px,50px) scale(.9)}}
+.mac-orb{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:-1}
+[data-motion="on"] .mac-orb{animation:macorb 14s ease-in-out infinite}
+[data-motion="on"] .mac-orb + .mac-orb{animation:macorb2 18s ease-in-out infinite}
+[data-motion="on"] section,[data-motion="on"] article,[data-motion="on"] aside,[data-motion="on"] [role="dialog"]{animation:macrise .8s cubic-bezier(.2,.9,.1,1) both}
+[data-motion="on"] section:nth-of-type(2),[data-motion="on"] article:nth-of-type(2),[data-motion="on"] aside{animation-delay:.12s}
+[data-motion="on"] article:nth-of-type(3){animation-delay:.24s}
+[data-motion="on"] button,[data-motion="on"] a,[data-motion="on"] label{transition:transform .3s cubic-bezier(.2,.9,.1,1),filter .25s,background .25s,border-color .25s,box-shadow .3s}
+[data-motion="on"] button:hover,[data-motion="on"] a:hover{transform:translateY(-2px);filter:brightness(1.08)}
+[data-motion="off"] *,[data-motion="off"] *::before,[data-motion="off"] *::after{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div data-motion="{{motionFlag}}" style="isolation: isolate; width: 960px; height: 860px; box-sizing: border-box; padding: 40px; background: #0b0c10; color: #eef0f6; font-family: 'Bricolage Grotesque', system-ui, sans-serif; display: flex; flex-direction: column; gap: 18px; position: relative; overflow: hidden">
+<div class="mac-orb" aria-hidden="true" style="width: 520px; height: 520px; left: -160px; top: -200px; background: {{accent}}; opacity: .16"></div><div class="mac-orb" aria-hidden="true" style="width: 460px; height: 460px; right: -140px; top: 80px; background: #b69cff; opacity: .18"></div>
+  <div style="display: flex; gap: 16px; align-items: center; padding: 18px 22px; border-radius: 22px; background: rgba(255,200,87,.08); border: 1px solid rgba(255,200,87,.35)">
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="flex: none; animation: {{motionAnim}}"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="#ffc857" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    <div style="flex: 1">
+      <div style="font-weight: 800; font-size: 17px">The app was offline for 14 minutes</div>
+      <div style="font-size: 14px; color: #c9b98f; margin-top: 2px">3 runs kept going on GitHub. They were picked up again from the run journal.</div>
+    </div>
+  </div>
+
+  <div>
+    <p style="font: 12px 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: #8d93a8; margin: 0 0 10px">Recovered</p>
+    <h2 style="font-size: 44px; line-height: .95; letter-spacing: -.04em; margin: 0; font-weight: 800">Welcome back.</h2>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <sc-for list="{{runs}}" as="r" hint-placeholder-count="3">
+      <article style="display: flex; gap: 18px; align-items: center; background: #12141b; border: 1px solid #2c3140; border-radius: 22px; padding: 20px 22px">
+        <span style="{{r.dot}}"></span>
+        <div style="flex: 1; min-width: 0">
+          <div style="font: 600 15px 'JetBrains Mono', monospace">{{r.name}}</div>
+          <div style="font-size: 14px; color: #a7adc0; margin-top: 4px; line-height: 1.45">{{r.what}}</div>
+        </div>
+        <span style="{{r.badge}}">{{r.status}}</span>
+      </article>
+    </sc-for>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: auto">
+    <div style="background: #12141b; border: 1px solid #2c3140; border-radius: 20px; padding: 18px 20px">
+      <div style="font: 600 12px 'JetBrains Mono', monospace; color: #7cf5c8; margin-bottom: 6px">BROWSER TAB CLOSED</div>
+      <div style="font-size: 14px; color: #a7adc0; line-height: 1.45">Nothing stops. The server keeps running builds; reopen the page and it catches up.</div>
+    </div>
+    <div style="background: #12141b; border: 1px solid #2c3140; border-radius: 20px; padding: 18px 20px">
+      <div style="font: 600 12px 'JetBrains Mono', monospace; color: #ffc857; margin-bottom: 6px">SERVER STOPPED</div>
+      <div style="font-size: 14px; color: #a7adc0; line-height: 1.45">Runs continue on GitHub. On restart the journal reattaches each one, collects outputs and cleans up.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent": {"editor": "color", "default": "#d4ff3a", "options": ["#d4ff3a", "#7cf5c8", "#b69cff", "#ff9e7a"], "section": "Look"}, "motion": {"editor": "boolean", "default": true, "section": "Look"}, "$preview": {"width": 960, "height": 860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#d4ff3a';
+    const motion = this.props.motion ?? true;
+    const motionAnim = motion ? 'macpulse 1.4s ease-in-out infinite' : 'none';
+    const motionFlag = motion ? 'on' : 'off';
+    const flow = motion ? 'macflow 1.6s linear infinite' : 'none';
+    const tone = { ready: [accent, 'rgba(212,255,58,.14)'], running: ['#b69cff', 'rgba(182,156,255,.14)'], cleaned: ['#ff7a6b', 'rgba(255,122,107,.14)'] };
+    const runs = [
+      ['map-editor · Build installer', 'Finished while offline. Outputs downloaded and decrypted; public repository destroyed.', 'ready'],
+      ['material-actions-creator · Build installer', 'Still building on windows-latest. Reattached to run #1 — live again.', 'running'],
+      ['demo:latest · Dockerfile', 'Temporary key expired before the app came back. Repository destroyed with the backup key; rerun to rebuild.', 'cleaned'],
+    ].map(([name, what, status]) => ({ name, what, status,
+      dot: 'width:12px;height:12px;border-radius:50%;flex:none;background:' + tone[status][0],
+      badge: 'font:700 11px JetBrains Mono,monospace;letter-spacing:.1em;text-transform:uppercase;padding:6px 10px;border-radius:99px;white-space:nowrap;color:' + tone[status][0] + ';background:' + tone[status][1] }));
+    return { accent, motionAnim, motionFlag, runs };
+  }
+}
+</script>
+</body>
+</html>

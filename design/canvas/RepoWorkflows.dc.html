@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Repository workflows</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#d4ff3a}a:hover{color:#eaff8f}
+@keyframes mactype{from{width:0}to{width:100%}}
+@keyframes macblink{50%{opacity:0}}
+@keyframes macpulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes macrise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes macflow{from{background-position:0% 50%}to{background-position:200% 50%}}
+@keyframes macorb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,-40px) scale(1.18)}}
+@keyframes macorb2{0%,100%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-70px,50px) scale(.9)}}
+.mac-orb{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:-1}
+[data-motion="on"] .mac-orb{animation:macorb 14s ease-in-out infinite}
+[data-motion="on"] .mac-orb + .mac-orb{animation:macorb2 18s ease-in-out infinite}
+[data-motion="on"] section,[data-motion="on"] article,[data-motion="on"] aside,[data-motion="on"] [role="dialog"]{animation:macrise .8s cubic-bezier(.2,.9,.1,1) both}
+[data-motion="on"] section:nth-of-type(2),[data-motion="on"] article:nth-of-type(2),[data-motion="on"] aside{animation-delay:.12s}
+[data-motion="on"] article:nth-of-type(3){animation-delay:.24s}
+[data-motion="on"] button,[data-motion="on"] a,[data-motion="on"] label{transition:transform .3s cubic-bezier(.2,.9,.1,1),filter .25s,background .25s,border-color .25s,box-shadow .3s}
+[data-motion="on"] button:hover,[data-motion="on"] a:hover{transform:translateY(-2px);filter:brightness(1.08)}
+[data-motion="off"] *,[data-motion="off"] *::before,[data-motion="off"] *::after{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div data-motion="{{motionFlag}}" style="isolation: isolate; position: relative; overflow: hidden; min-height: 1180px; background: #0b0c10; color: #eef0f6; font-family: 'Bricolage Grotesque', system-ui, sans-serif; padding: 56px 64px 80px; box-sizing: border-box">
+<div class="mac-orb" aria-hidden="true" style="width: 560px; height: 560px; left: -180px; top: -220px; background: {{accent}}; opacity: .16"></div><div class="mac-orb" aria-hidden="true" style="width: 480px; height: 480px; right: -160px; top: 120px; background: #b69cff; opacity: .2"></div>
+  <div style="display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; max-width: 1320px; margin: 0 auto">
+    <section style="flex: 999 1 640px; min-width: 0; background: #151820; border: 1px solid #2c3140; border-radius: 28px; padding: 32px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
+        <p style="margin: 0; font: 600 12px 'JetBrains Mono', monospace; letter-spacing: .08em; color: {{accent}}">03 · THE REPOSITORY'S OWN WORKFLOWS</p>
+        <span style="font-size: 14px; color: #a7adc0">Found 4 workflows</span>
+      </div>
+      <p style="margin: 14px 0 18px; font-size: 15px; line-height: 1.5; color: #a7adc0; max-width: 62ch">Each chosen workflow runs inside the temporary repository: triggers become a manual start, permissions become read-only, publishing steps are removed, and in encrypted mode every artifact is sealed before upload.</p>
+      <div style="display: flex; gap: 18px; margin-bottom: 14px">
+        <button type="button" onClick="{{allOn}}" style="border: 0; background: none; color: {{accent}}; font: inherit; font-weight: 700; font-size: 15px; padding: 10px 0; min-height: 44px">Run all workflows</button>
+        <button type="button" onClick="{{allOff}}" style="border: 0; background: none; color: #a7adc0; font: inherit; font-weight: 600; font-size: 15px; padding: 10px 0; min-height: 44px">None</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <sc-for list="{{wfs}}" as="w" hint-placeholder-count="4">
+          <article style="{{w.row}}">
+            <label style="display: flex; gap: 14px; align-items: center; cursor: pointer">
+              <input type="checkbox" checked="{{w.on}}" disabled="{{w.locked}}" onChange="{{w.toggle}}" style="width: 20px; height: 20px; accent-color: {{accent}}">
+              <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+                <span style="font: 600 16px 'JetBrains Mono', monospace">{{w.name}}</span>
+                <span style="font: 12px 'JetBrains Mono', monospace; color: #8d93a8">{{w.path}}</span>
+              </span>
+            </label>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0 34px">
+              <sc-for list="{{w.changes}}" as="c" hint-placeholder-count="2"><span style="{{c.style}}">{{c.label}}</span></sc-for>
+            </div>
+          </article>
+        </sc-for>
+      </div>
+    </section>
+    <aside style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+      <div style="background: #08090c; border: 1px solid #2c3140; border-radius: 28px; overflow: hidden">
+        <div style="display: flex; justify-content: space-between; padding: 14px 20px; background: #12141b; font: 13px 'JetBrains Mono', monospace"><span>release.yml · rewritten</span><span style="display: flex; align-items: center; gap: 8px; color: #7cf5c8"><i style="width: 8px; height: 8px; border-radius: 50%; background: #7cf5c8; animation: {{motionAnim}}"></i>sealed</span></div>
+        <div style="padding: 20px; font: 13px/1.75 'JetBrains Mono', monospace; color: #cfd3e0; white-space: pre-line"><span style="color: #8d93a8"># push: tags → manual start</span>
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+<span style="color: #8d93a8"># after checkout</span>
+- name: <span style="color: {{accent}}">decrypt and unpack sources</span>
+<span style="color: #8d93a8"># upload-artifact → sealed</span>
+- name: <span style="color: {{accent}}">seal installers</span>
+- uses: actions/upload-artifact@v4
+  with: { name: mac-output-installers }
+<span style="color: #ff7a6b; text-decoration: line-through"># softprops/action-gh-release — removed</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #12141b; border: 1px solid #2c3140; border-radius: 22px; padding: 14px 14px 14px 20px">
+        <span style="font-size: 14px; color: #a7adc0">{{summary}}</span>
+        <button type="button" style="border: 0; background: {{accent}}; color: #141a00; font: inherit; font-weight: 800; font-size: 17px; padding: 16px 24px; border-radius: 20px; min-height: 48px">Run build →</button>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent": {"editor": "color", "default": "#d4ff3a", "options": ["#d4ff3a", "#7cf5c8", "#b69cff", "#ff9e7a"], "section": "Look"}, "motion": {"editor": "boolean", "default": true, "section": "Look"}, "$preview": {"width": 1440, "height": 1180}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { on: { 'release.yml': true, 'lint.yml': true, 'nightly.yml': false } }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#d4ff3a';
+    const motion = this.props.motion ?? true;
+    const motionAnim = motion ? 'macpulse 1.4s ease-in-out infinite' : 'none';
+    const motionFlag = motion ? 'on' : 'off';
+    const flow = motion ? 'macflow 1.6s linear infinite' : 'none';
+    const chip = (label, kind) => ({ label, style: 'font:600 11px JetBrains Mono,monospace;padding:5px 10px;border-radius:99px;' + (kind === 'warn' ? 'color:#ffc857;background:rgba(255,200,87,.12)' : kind === 'cut' ? 'color:#ff7a6b;background:rgba(255,122,107,.12)' : 'color:#7cf5c8;background:rgba(124,245,200,.12)') });
+    const list = [
+      ['Release', '.github/workflows/release.yml', 'release.yml', [chip('manual start', 'ok'), chip('read-only token', 'ok'), chip('release step removed', 'cut'), chip('artifacts sealed', 'ok')]],
+      ['Lint', '.github/workflows/lint.yml', 'lint.yml', [chip('push + PR → manual start', 'ok')]],
+      ['Nightly', '.github/workflows/nightly.yml', 'nightly.yml', [chip('schedule → manual start', 'ok'), chip('secret NPM_TOKEN not available', 'warn')]],
+      ['build-common', '.github/workflows/build-common.yml', null, [chip('callable only · included, not started', 'warn')]],
+    ];
+    const wfs = list.map(([name, path, key, changes]) => {
+      const locked = !key;
+      const on = !locked && Boolean(this.state.on[key]);
+      return { name, path, changes, on, locked,
+        toggle: () => this.setState({ on: { ...this.state.on, [key]: !on } }),
+        row: 'padding:16px 18px;border-radius:18px;border:1px solid ' + (on ? '#2c3140' : '#1d2029') + ';background:' + (on ? '#0b0c10' : 'transparent') + (locked ? ';opacity:.55' : '') };
+    });
+    const n = wfs.filter((w) => w.on).length;
+    return { accent, motionAnim, motionFlag, wfs,
+      allOn: () => this.setState({ on: { 'release.yml': true, 'lint.yml': true, 'nightly.yml': true } }),
+      allOff: () => this.setState({ on: {} }),
+      summary: n + ' workflow' + (n === 1 ? '' : 's') + ' · encrypted public builder' };
+  }
+}
+</script>
+</body>
+</html>

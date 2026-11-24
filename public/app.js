@@ -79,6 +79,14 @@ function formatBytes(n) {
 
 /* ---------- Tabs ---------- */
 function setTab(tab) {
+  if (state.tab !== tab && document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    state.tab = tab;
+    document.startViewTransition(() => applyTab(tab));
+    return;
+  }
+  applyTab(tab);
+}
+function applyTab(tab) {
   state.tab = tab;
   store.set('mac-tab', tab);
   $$('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
@@ -531,7 +539,14 @@ $('#recoveryDismiss').addEventListener('click', async () => {
 function renderAccount() {
   const a = state.auth;
   $('#accountName').textContent = a?.signedIn ? a.login : 'Sign in';
-  $('#avatar').style.backgroundImage = a?.avatarUrl ? `url("${a.avatarUrl}")` : '';
+  const av = $('#avatar');
+  av.style.backgroundImage = '';
+  if (a?.avatarUrl) {
+    // Only swap the gradient for the photo once it actually loads.
+    const img = new Image();
+    img.onload = () => { av.style.backgroundImage = `url("${a.avatarUrl}")`; };
+    img.src = a.avatarUrl;
+  }
   $('#scopeDots').innerHTML = (a?.required || []).map((s) => `<i class="${a.signedIn && !a.missing.includes(s) ? 'ok' : 'miss'}" title="${s}"></i>`).join('');
 }
 function scopesHtml(a) {

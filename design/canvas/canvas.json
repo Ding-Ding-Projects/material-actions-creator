@@ -1,0 +1,255 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-24T00:50:00Z"
+ },
+ "title": "Material Actions Creator — UI",
+ "launch": {
+  "view": "canvas",
+  "page": "workflows"
+ },
+ "pages": [
+  {
+   "id": "workflows",
+   "name": "Workflows — build a repository"
+  },
+  {
+   "id": "runs",
+   "name": "Runs — GitHub Actions pipeline"
+  },
+  {
+   "id": "dockerfile",
+   "name": "Dockerfile — Docker image builds"
+  },
+  {
+   "id": "sign-in",
+   "name": "GitHub CLI login"
+  },
+  {
+   "id": "cli",
+   "name": "mac CLI"
+  },
+  {
+   "id": "docs-site",
+   "name": "Docs site"
+  }
+ ],
+ "boards": {
+  "WorkflowCreator.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 1320,
+   "title": "Workflow creator — build scripts → build outputs",
+   "page": "workflows",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "RepoWorkflows.dc.html": {
+   "x": 1940,
+   "y": 0,
+   "w": 1440,
+   "h": 1180,
+   "title": "The repository's own workflows",
+   "page": "workflows",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Runs.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 1500,
+   "title": "Runs — decrypted build outputs + resumed run",
+   "page": "runs",
+   "expand": "fill"
+  },
+  "EncryptedRun.dc.html": {
+   "x": 1940,
+   "y": 0,
+   "w": 1440,
+   "h": 1240,
+   "title": "Encrypted public builder run",
+   "page": "runs",
+   "expand": "fill"
+  },
+  "Recovery.dc.html": {
+   "x": 3880,
+   "y": 0,
+   "w": 960,
+   "h": 860,
+   "title": "Welcome back — app was closed mid-run",
+   "page": "runs"
+  },
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 1360,
+   "title": "Dockerfile in, Docker image out",
+   "page": "dockerfile",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SignIn.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 560,
+   "h": 560,
+   "title": "Assisted GitHub CLI login",
+   "page": "sign-in"
+  },
+  "Cli.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1100,
+   "h": 900,
+   "title": "mac CLI — login and encrypted build",
+   "page": "cli"
+  },
+  "Docs.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 1240,
+   "title": "Docs site — hero + how it works",
+   "page": "docs-site",
+   "expand": "fill"
+  }
+ },
+ "order": [
+  "WorkflowCreator.dc.html",
+  "RepoWorkflows.dc.html",
+  "Runs.dc.html",
+  "EncryptedRun.dc.html",
+  "Recovery.dc.html",
+  "Main.dc.html",
+  "SignIn.dc.html",
+  "Cli.dc.html",
+  "Docs.dc.html"
+ ],
+ "notes": {
+  "title-workflows": {
+   "x": 0,
+   "y": -300,
+   "text": "Workflows — build a repository",
+   "kind": "title1",
+   "maxW": 3760,
+   "page": "workflows"
+  },
+  "note-WorkflowCreator": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "Workflows tab. Try: tick or untick scripts, switch the runner, switch Private ↔ Encrypted public builder — the YAML preview on the right changes. Tweaks: accent, motion. Stands for the real Workflows tab (shipped). Unbuilt: drag-to-reorder (the app uses ↑/↓), stage boards for loading/empty/error.",
+   "fill": "yellow",
+   "page": "workflows"
+  },
+  "note-RepoWorkflows": {
+   "x": 3420,
+   "y": 0,
+   "w": 340,
+   "text": "The repository's own workflows, chosen per file or with Run all. Chips show what gets rewritten (manual start, read-only token, removed publishing, sealed artifacts, missing secrets). Try: Run all / None and the checkboxes. Tweaks: accent, motion. Real behaviour shipped on branch feat/source-workflows-cli; not yet run against real GitHub.",
+   "fill": "yellow",
+   "page": "workflows"
+  },
+  "title-runs": {
+   "x": 0,
+   "y": -300,
+   "text": "Runs — GitHub Actions pipeline",
+   "kind": "title1",
+   "maxW": 5220,
+   "page": "runs"
+  },
+  "note-Runs": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "Runs tab with a resumed encrypted build (flowing segment = the active stage) and a finished one listing decrypted build outputs. Tweaks: accent, motion (stills the orbs, entrance, flow). Stands for the real Runs tab. Unbuilt: per-run sub-run chips board, empty and offline stages.",
+   "fill": "yellow",
+   "page": "runs"
+  },
+  "note-EncryptedRun": {
+   "x": 3420,
+   "y": 0,
+   "w": 340,
+   "text": "Detail view for one encrypted public run: 9 stages, temporary key countdown, what the public can see. Tweaks: accent, motion. The app shows this as a run card, not a separate page yet — this board is ahead of the build.",
+   "fill": "yellow",
+   "page": "runs"
+  },
+  "note-Recovery": {
+   "x": 4880,
+   "y": 0,
+   "w": 340,
+   "text": "What the app shows after it was closed mid-run: the run journal picked builds back up. Tweaks: accent, motion. Real banner shipped; this richer per-run summary is design only.",
+   "fill": "yellow",
+   "page": "runs"
+  },
+  "title-dockerfile": {
+   "x": 0,
+   "y": -300,
+   "text": "Dockerfile — Docker image builds",
+   "kind": "title1",
+   "maxW": 1820,
+   "page": "dockerfile"
+  },
+  "note-Main": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "Original v1 screen: Dockerfile in, Docker image out. Try the platform buttons. Tweaks: accent, motion. The app now shows this under the Dockerfile tab with the run modes beside it.",
+   "fill": "yellow",
+   "page": "dockerfile"
+  },
+  "title-sign-in": {
+   "x": 0,
+   "y": -300,
+   "text": "GitHub CLI login",
+   "kind": "title1",
+   "maxW": 1600,
+   "page": "sign-in"
+  },
+  "note-SignIn": {
+   "x": 600,
+   "y": 0,
+   "w": 340,
+   "text": "Assisted GitHub CLI login in the app: device code, scopes, waiting dots. Tweaks: accent, motion. Shipped in the GUI; the CLI twin is on the mac CLI page.",
+   "fill": "yellow",
+   "page": "sign-in"
+  },
+  "title-cli": {
+   "x": 0,
+   "y": -300,
+   "text": "mac CLI",
+   "kind": "title1",
+   "maxW": 1600,
+   "page": "cli"
+  },
+  "note-Cli": {
+   "x": 1140,
+   "y": 0,
+   "w": 340,
+   "text": "mac CLI: assisted login with the device code, then an encrypted build of every script and workflow. Tweaks: accent, motion (stills the cursor and spinner). Shipped on branch feat/source-workflows-cli.",
+   "fill": "yellow",
+   "page": "cli"
+  },
+  "title-docs-site": {
+   "x": 0,
+   "y": -300,
+   "text": "Docs site",
+   "kind": "title1",
+   "maxW": 1820,
+   "page": "docs-site"
+  },
+  "note-Docs": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "Docs site hero and how-it-works. Tweaks: accent, motion. Live Docs site waits on GitHub Pages being turned on. Unbuilt: CLI and repository-workflow sections on this board (they exist in the real docs/).",
+   "fill": "yellow",
+   "page": "docs-site"
+  }
+ },
+ "designSystems": []
+}
