@@ -25,6 +25,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install
+        run: npm ci
       - name: Syntax check
         run: npm run check
       - name: Test
@@ -43,7 +46,95 @@ jobs:
       - name: Lint this repository's workflows
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
       - name: Lint generated workflows
-        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color rendered/amd64.yml rendered/arm64-args.yml
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color rendered/amd64.yml rendered/arm64-args.yml rendered/docker-encrypted.yml rendered/scripts-private.yml rendered/scripts-encrypted.yml
+
+  crypt-compat:
+    name: mac-crypt skill on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Make a run key
+        id: key
+        shell: bash
+        run: |
+          key=$(node src/mac-crypt.mjs keygen)
+          echo "::add-mask::$key"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+      - name: Fake source repository with a build script
+        shell: bash
+        run: |
+          mkdir -p fake/owner-repo-abc123/build
+          printf '@echo off\r\nmkdir dist\\sub 2>nul\r\necho installer for %%COMPUTERNAME%%> dist\\Setup-1.0.exe\r\necho msi> dist\\sub\\App.msi\r\n' > fake/owner-repo-abc123/build/installer.bat
+          printf '#!/usr/bin/env bash\nmkdir -p dist/sub\necho installer > dist/Setup-1.0.exe\necho msi > dist/sub/App.msi\n' > fake/owner-repo-abc123/build/installer.sh
+          tar -czf src.tar.gz -C fake owner-repo-abc123
+          mkdir -p bundle && mv src.tar.gz bundle/
+      - name: Seal sources (what the app does before upload)
+        uses: ./.github/actions/mac-crypt
+        with:
+          mode: seal
+          key: ${{ steps.key.outputs.key }}
+          path: bundle
+          globs: src.tar.gz
+          output: src.mac
+      - name: Unpack sources (same commands as the generated workflow)
+        shell: bash
+        env:
+          MAC_KEY: ${{ steps.key.outputs.key }}
+        run: |
+          rm -rf bundle fake
+          node src/mac-crypt.mjs open src.mac .mac-src
+          mv .mac-src/src.tar.gz src.tar.gz
+          mkdir -p src
+          tar -xzf src.tar.gz --strip-components=1 -C src
+          rm -f src.tar.gz
+      - name: Run the .bat build script
+        if: runner.os == 'Windows'
+        shell: cmd
+        working-directory: src
+        env:
+          SCRIPT: "build\\installer.bat"
+        run: call "%SCRIPT%"
+      - name: Run the .sh build script
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: src
+        env:
+          SCRIPT: "build/installer.sh"
+        run: bash "./$SCRIPT"
+      - name: Seal lap saps with the composite action
+        uses: ./.github/actions/mac-crypt
+        with:
+          mode: seal
+          key: ${{ steps.key.outputs.key }}
+          path: src
+          globs: "dist/**/*.exe, dist/**/*.msi"
+          output: out.mac
+      - name: Open lap saps (what the app does after download)
+        uses: ./.github/actions/mac-crypt
+        with:
+          mode: open
+          key: ${{ steps.key.outputs.key }}
+          input: out.mac
+          path: back
+      - name: Verify round trip
+        shell: bash
+        run: |
+          test -s back/dist/Setup-1.0.exe
+          test -s back/dist/sub/App.msi
+          cmp src/dist/Setup-1.0.exe back/dist/Setup-1.0.exe
+          if grep -a -q "installer" out.mac; then echo "plaintext leaked into out.mac"; exit 1; fi
+          echo "mac-crypt OK on $RUNNER_OS"
+      - name: Wrong key must fail
+        shell: bash
+        run: |
+          if MAC_KEY=$(node src/mac-crypt.mjs keygen) node src/mac-crypt.mjs open out.mac nope; then exit 1; fi
 
   docker:
     name: Docker image build + smoke test

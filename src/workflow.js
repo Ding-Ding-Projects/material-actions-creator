@@ -1,12 +1,29 @@
-// Generates the files committed to the temporary repository.
-// User files live under context/ so they can never overwrite the workflow.
+// Validates build requests and generates the workflow + files committed to the
+// temporary repository. Two kinds of build:
+//   - "dockerfile": Dockerfile instructions in, Docker image (.tar.gz) out
+//   - "scripts":    a source repository's build scripts (.bat/.cmd/.ps1/.sh) in, installer files out
+// Two run modes:
+//   - "private":          throwaway private repository, plain files
+//   - "encrypted-public": throwaway public repository; sources and lap saps are
+//                         encrypted with mac-crypt and the key is an Actions secret
 
 export const PLATFORMS = ['linux/amd64', 'linux/arm64', 'linux/arm/v7', 'linux/386', 'linux/ppc64le', 'linux/s390x'];
-export const WORKFLOW_FILE = 'build-image.yml';
-export const ARTIFACT_NAME = 'docker-image';
+export const RUNNERS = ['windows-latest', 'windows-2025', 'windows-2022', 'windows-11-arm', 'ubuntu-latest', 'ubuntu-24.04-arm', 'macos-latest'];
+export const MODES = ['private', 'encrypted-public'];
+export const KINDS = ['dockerfile', 'scripts'];
+export const WORKFLOW_FILE = 'build.yml';
+export const ARTIFACT_NAME = 'lap-sap';
 export const IMAGE_FILE = 'image.tar.gz';
+export const SEALED_SOURCE = 'src.mac';
+export const SEALED_OUTPUT = 'out.mac';
+export const SOURCE_TARBALL = 'src.tar.gz';
+export const CRYPT_PATH = '.mac/crypt.mjs';
 
 const IMAGE_RE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:\/[a-z0-9]+(?:[._-][a-z0-9]+)*)*(?::[A-Za-z0-9_][A-Za-z0-9_.-]{0,127})?$/;
+const REPO_RE = /^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/;
+const REF_RE = /^[A-Za-z0-9._\-/]{1,200}$/;
+const SCRIPT_RE = /^[A-Za-z0-9._\-/\\ ()]+\.(bat|cmd|ps1|sh)$/i;
+const GLOB_RE = /^[A-Za-z0-9._\-/\\*? ()]+$/;
 const MAX_FILE_BYTES = 512 * 1024;
 const MAX_FILES = 50;
 
@@ -30,8 +47,13 @@ export function normalizePath(p) {
   return clean;
 }
 
-export function validateRequest(body) {
-  if (!body || typeof body !== 'object') throw new ValidationError('Request body must be JSON.');
+function validateMode(body) {
+  const mode = body.mode || 'private';
+  if (!MODES.includes(mode)) throw new ValidationError(`Unknown mode: ${mode}`);
+  return mode;
+}
+
+function validateDockerfile(body) {
   const dockerfile = body.dockerfile;
   if (typeof dockerfile !== 'string' || !dockerfile.trim()) throw new ValidationError('Dockerfile instructions are required.');
   if (!/^\s*(#.*\n\s*)*(ARG|FROM)\b/i.test(dockerfile)) throw new ValidationError('Dockerfile must start with FROM (or ARG before FROM).');
@@ -64,20 +86,79 @@ export function validateRequest(body) {
     if (/[\r\n]/.test(value)) throw new ValidationError(`Build arg ${k} must be a single line.`);
     buildArgs[k] = value;
   }
-  return { dockerfile, imageName, platform, files: cleanFiles, buildArgs };
+  return { kind: 'dockerfile', mode: validateMode(body), dockerfile, imageName, platform, files: cleanFiles, buildArgs };
 }
 
-function yamlString(s) {
+function validateScripts(body) {
+  const repo = String(body.repo || '').trim().replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '');
+  if (!REPO_RE.test(repo)) throw new ValidationError('Repository must look like owner/name.');
+  const ref = String(body.ref || '').trim() || 'HEAD';
+  if (!REF_RE.test(ref) || ref.includes('..')) throw new ValidationError('Invalid branch, tag or commit.');
+  const runner = body.runner || 'windows-latest';
+  if (!RUNNERS.includes(runner)) throw new ValidationError(`Unsupported runner: ${runner}`);
+  const scripts = (Array.isArray(body.scripts) ? body.scripts : []).map((s) => String(s).trim()).filter(Boolean);
+  if (!scripts.length) throw new ValidationError('Pick at least one build script.');
+  if (scripts.length > 20) throw new ValidationError('At most 20 build scripts.');
+  for (const s of scripts) {
+    if (!SCRIPT_RE.test(s) || s.split(/[\\/]/).includes('..') || /^[\\/]/.test(s)) throw new ValidationError(`Invalid script path: ${s}`);
+    if (/\.(bat|cmd)$/i.test(s) && !runner.startsWith('windows')) throw new ValidationError(`${s} needs a Windows runner.`);
+  }
+  const outputs = (Array.isArray(body.outputs) ? body.outputs : String(body.outputs || '').split(/[\n,]/)).map((g) => g.trim()).filter(Boolean);
+  if (!outputs.length) throw new ValidationError('Say which files are the lap saps (for example dist/**/*.exe).');
+  for (const g of outputs) {
+    if (!GLOB_RE.test(g) || g.split(/[\\/]/).includes('..') || /^[\\/]/.test(g)) throw new ValidationError(`Invalid output pattern: ${g}`);
+  }
+  const name = String(body.name || '').trim() || `${repo.split('/')[1]} build`;
+  if (name.length > 80 || /[\r\n]/.test(name)) throw new ValidationError('Name is too long.');
+  return { kind: 'scripts', mode: validateMode(body), repo, ref, runner, scripts, outputs, name };
+}
+
+export function validateRequest(body) {
+  if (!body || typeof body !== 'object') throw new ValidationError('Request body must be JSON.');
+  const kind = body.kind || 'dockerfile';
+  if (!KINDS.includes(kind)) throw new ValidationError(`Unknown build kind: ${kind}`);
+  return kind === 'scripts' ? validateScripts(body) : validateDockerfile(body);
+}
+
+function q(s) {
   return JSON.stringify(String(s)); // JSON strings are valid YAML double-quoted scalars
 }
 
-export function renderWorkflow({ imageName, platform, buildArgs = {} }) {
+const SETUP_NODE = `      - name: Set up Node for mac-crypt
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+`;
+
+// globsArg is inserted inside double quotes in bash: either "$VAR" or a literal.
+const sealStep = (base, globsArg) => `      - name: Encrypt lap saps
+        shell: bash
+        env:
+          MAC_KEY: \${{ secrets.MAC_KEY }}
+        run: node ${CRYPT_PATH} seal ${SEALED_OUTPUT} ${base} "${globsArg}"
+`;
+
+function uploadStep(paths) {
+  return `      - name: Upload lap sap
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${ARTIFACT_NAME}
+          path: |
+${paths.map((p) => `            ${p}`).join('\n')}
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+`;
+}
+
+export function renderDockerWorkflow({ imageName, platform, buildArgs = {}, mode = 'private' }) {
+  const enc = mode === 'encrypted-public';
   const needsQemu = platform !== 'linux/amd64' && platform !== 'linux/386';
   const argNames = Object.keys(buildArgs);
   const envLines = [
-    `  IMAGE_NAME: ${yamlString(imageName)}`,
-    `  PLATFORM: ${yamlString(platform)}`,
-    ...argNames.map((k, i) => `  BUILD_ARG_${i}: ${yamlString(`${k}=${buildArgs[k]}`)}`),
+    `  IMAGE_NAME: ${q(imageName)}`,
+    `  PLATFORM: ${q(platform)}`,
+    ...argNames.map((k, i) => `  BUILD_ARG_${i}: ${q(`${k}=${buildArgs[k]}`)}`),
   ];
   const argFlags = argNames.map((_, i) => ` --build-arg "$BUILD_ARG_${i}"`).join('');
   return `name: Build Docker image
@@ -94,7 +175,11 @@ jobs:
     steps:
       - name: Check out build context
         uses: actions/checkout@v4
-${needsQemu ? `      - name: Set up QEMU
+${enc ? `${SETUP_NODE}      - name: Decrypt build context
+        env:
+          MAC_KEY: \${{ secrets.MAC_KEY }}
+        run: node ${CRYPT_PATH} open ${SEALED_SOURCE} context
+` : ''}${needsQemu ? `      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 ` : ''}      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -106,27 +191,71 @@ ${needsQemu ? `      - name: Set up QEMU
         run: |
           gzip -1 image.tar
           ls -lh ${IMAGE_FILE}
-          echo "### Built \\\`$IMAGE_NAME\\\` for \\\`$PLATFORM\\\`" >> "$GITHUB_STEP_SUMMARY"
-      - name: Upload image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${ARTIFACT_NAME}
-          path: ${IMAGE_FILE}
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
+${enc ? `${sealStep('.', IMAGE_FILE)}${uploadStep([SEALED_OUTPUT])}` : uploadStep([IMAGE_FILE])}`;
+}
+
+function scriptStep(script, i) {
+  const ext = script.split('.').pop().toLowerCase();
+  const shell = ext === 'ps1' ? 'pwsh' : ext === 'sh' ? 'bash' : 'cmd';
+  const call = ext === 'ps1' ? '& "./$env:SCRIPT"' : ext === 'sh' ? 'bash "./$SCRIPT"' : 'call "%SCRIPT%"';
+  const p = ext === 'sh' || ext === 'ps1' ? script.replace(/\\/g, '/') : script.replace(/\//g, '\\');
+  return `      - name: Run script ${i + 1}
+        shell: ${shell}
+        working-directory: src
+        env:
+          SCRIPT: ${q(p)}
+        run: ${call}
 `;
 }
 
-export function buildRepoFiles(req) {
-  return [
-    { path: 'README.md', content: `# Temporary build repository\n\nCreated by material-actions-creator to build \`${req.imageName}\`. It is deleted automatically.\n` },
-    { path: 'context/Dockerfile', content: req.dockerfile },
-    ...req.files.map((f) => ({ path: `context/${f.path}`, content: f.content })),
-    { path: `.github/workflows/${WORKFLOW_FILE}`, content: renderWorkflow(req) },
-  ];
+export function renderScriptWorkflow({ name, runner, scripts, outputs, mode = 'private' }) {
+  const enc = mode === 'encrypted-public';
+  const globs = outputs.map((g) => g.replace(/\\/g, '/'));
+  return `name: ${q(name)}
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  OUTPUT_GLOBS: ${q(globs.join(','))}
+jobs:
+  build:
+    runs-on: ${runner}
+    timeout-minutes: 180
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+${enc ? SETUP_NODE : ''}      - name: Unpack sources
+        shell: bash
+${enc ? `        env:
+          MAC_KEY: \${{ secrets.MAC_KEY }}
+` : ''}        run: |
+${enc ? `          node ${CRYPT_PATH} open ${SEALED_SOURCE} .mac-src
+          mv .mac-src/${SOURCE_TARBALL} ${SOURCE_TARBALL}
+` : ''}          mkdir -p src
+          tar -xzf ${SOURCE_TARBALL} --strip-components=1 -C src
+          rm -f ${SOURCE_TARBALL}
+${scripts.map(scriptStep).join('')}${enc ? `${sealStep('src', '$OUTPUT_GLOBS')}${uploadStep([SEALED_OUTPUT])}` : uploadStep(globs.map((g) => `src/${g}`))}`;
+}
+
+export function renderWorkflow(req) {
+  return req.kind === 'scripts' ? renderScriptWorkflow(req) : renderDockerWorkflow(req);
+}
+
+export function readme(req) {
+  const what = req.kind === 'scripts' ? `${req.repo}@${req.ref}` : `\`${req.imageName}\``;
+  const enc = req.mode === 'encrypted-public'
+    ? '\n\nEverything here is encrypted with mac-crypt. Sources and outputs cannot be read without the per-run key.\n'
+    : '\n';
+  return `# Temporary build repository\n\nCreated by material-actions-creator to build ${what}. It is deleted automatically.${enc}`;
 }
 
 export function downloadName(imageName) {
   return `${imageName.replace(/[/:]/g, '_')}.tar.gz`;
+}
+
+export function describe(req) {
+  return req.kind === 'scripts'
+    ? { title: req.name, subtitle: `${req.repo} @ ${req.ref} → ${req.runner}` }
+    : { title: req.imageName, subtitle: req.platform };
 }

@@ -88,7 +88,7 @@
     td:nth-child(2) { font-family: var(--mono); color: var(--muted); }
     .table-wrap { overflow-x: auto; background: var(--ink-1); border: 1px solid var(--line); border-radius: 26px; padding: 10px 18px; }
 
-    .checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
     @media (max-width: 900px) { .checks { grid-template-columns: 1fr; } }
     .check { border: 1px solid var(--line); border-radius: 22px; padding: 24px; background: var(--ink-1); }
     .check .tag { font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--violet); }
@@ -106,6 +106,8 @@
       <a class="brand" href="#"><img src="icon.svg" width="32" height="32" alt=""> <span>Material<b>Actions</b>Creator</span></a>
       <div class="links">
         <a href="#how">How it works</a>
+        <a href="#encrypted">Encrypted builder</a>
+        <a href="#skill">mac-crypt skill</a>
         <a href="#start">Quick start</a>
         <a href="#config">Config</a>
         <a href="#tests">Tests</a>
@@ -117,28 +119,27 @@
   <header class="wrap hero">
     <div>
       <p class="eyebrow">Self-hosted · GitHub Actions · Zero leftovers</p>
-      <h1>Dockerfile in.<br><em>Image out.</em></h1>
-      <p class="lede">Paste build instructions, hit build. A private throwaway repository runs your build on GitHub Actions, the image comes back as a <code>.tar.gz</code> you can <code>docker load</code>, and the repository is deleted the moment it's done.</p>
+      <h1>Repo in.<br><em>Installer out.</em></h1>
+      <p class="lede">Point it at a repository, tick its <code>.bat</code> build scripts, pick a Windows runner and say which files you want. A throwaway repository runs the build on GitHub Actions — privately, or encrypted end to end on a public builder — the installers come back as downloads, and the repository is deleted. Dockerfiles work too.</p>
       <div class="cta">
         <a class="fab" href="#start">Run it in one command →</a>
         <a class="ghost" href="https://github.com/Ding-Ding-Projects/material-actions-creator">View source</a>
       </div>
     </div>
     <div class="machine" aria-hidden="true">
-      <div class="file"><span class="com"># Dockerfile</span>
-<span class="kw">FROM</span> node:22-alpine
-<span class="kw">WORKDIR</span> /app
-<span class="kw">COPY</span> server.js .
-<span class="kw">CMD</span> [<span class="str">"node"</span>, <span class="str">"server.js"</span>]</div>
+      <div class="file"><span class="com"># Ding-Ding-Projects/map-editor @ main → windows-latest</span>
+<span class="kw">01</span> build\installer.bat
+<span class="kw">02</span> build\sign.bat
+<span class="com"># lap saps:</span> <span class="str">dist/**/*.exe, dist/**/*.msi</span></div>
       <ol class="steps">
-        <li style="--i:0"><span>Create temporary repository</span><span>mac-tmp-4f1c</span></li>
-        <li style="--i:1"><span>Commit Dockerfile + workflow</span><span>4 files</span></li>
-        <li style="--i:2"><span>Start workflow run</span><span>run #1</span></li>
-        <li style="--i:3"><span>Build on GitHub Actions</span><span>buildx</span></li>
-        <li style="--i:4"><span>Download image artifact</span><span>48 MB</span></li>
-        <li style="--i:5" class="del"><span>Delete temporary repository</span><span>gone</span></li>
+        <li style="--i:0"><span>Mint temporary key</span><span>1h</span></li>
+        <li style="--i:1"><span>Encrypt sources → public repo</span><span>src.mac</span></li>
+        <li style="--i:2"><span>Store key as Actions secret</span><span>MAC_KEY</span></li>
+        <li style="--i:3"><span>Run build scripts on Windows</span><span>cmd</span></li>
+        <li style="--i:4"><span>Download and decrypt lap saps</span><span>2 files</span></li>
+        <li style="--i:5" class="del"><span>Destroy repository and key</span><span>gone</span></li>
       </ol>
-      <div class="out"><span>↓ node-app_latest.tar.gz</span><span>ready</span></div>
+      <div class="out"><span>↓ MapEditor-Setup-1.4.0.exe</span><span>decrypted</span></div>
     </div>
   </header>
 
@@ -154,6 +155,81 @@
         <div><h3>Build</h3><p>Buildx (plus QEMU for non-x86 targets) builds the image and saves it with <code>docker save</code>.</p></div>
         <div><h3>Download</h3><p>The artifact streams to the server and is unpacked into a plain <code>.tar.gz</code>.</p></div>
         <div><h3>Delete</h3><p>The repository is deleted whether the build passed or failed. A sweeper catches anything a crash left behind.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="encrypted">
+    <div class="wrap">
+      <p class="eyebrow">Encrypted public builder</p>
+      <h2>Public runner.<br><span class="grad">Private bytes.</span></h2>
+      <p class="sub">Pick <b>Encrypted public builder</b> and the build runs in a throwaway <em>public</em> repository that only ever holds ciphertext.</p>
+      <div class="bento">
+        <div class="tile t-7">
+          <h3>What happens</h3>
+          <p>A fresh 32-byte key is made for every run. The source snapshot is sealed into <code>src.mac</code> (AES-256-GCM, chunked and authenticated) and committed with a copy of the mac-crypt tool. The key goes in as the <code>MAC_KEY</code> Actions secret, sealed to the repository's public key. On the runner the workflow opens the sources, runs your scripts, seals the outputs into <code>out.mac</code> and uploads only that. The app downloads it, decrypts it, lists each file for download, then deletes the repository and revokes the key.</p>
+        </div>
+        <div class="tile t-5">
+          <h3>Temporary key</h3>
+          <p>Configure a GitHub App (<code>GITHUB_APP_ID</code>, <code>GITHUB_APP_PRIVATE_KEY</code>, <code>GITHUB_APP_INSTALLATION_ID</code>) and each encrypted run mints its own installation token: it expires after an hour and is revoked as soon as the run is cleaned up. Without an App, the signed-in session is used.</p>
+        </div>
+        <div class="tile t-4">
+          <h3>Still public</h3>
+          <p>The repository name, the workflow file, the run logs, file sizes and timing. Build scripts that print paths or file contents print them in public logs. Secret values are masked.</p>
+        </div>
+        <div class="tile t-8">
+          <h3>Read GitHub's terms first</h3>
+          <p>Public repositories get free Actions minutes. GitHub's Actions terms expect workflows to serve the project in that repository, and throwaway repositories holding only encrypted private code can look like avoiding billing. That can get an account flagged. The private temp repo mode has no such issue.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="skill">
+    <div class="wrap">
+      <p class="eyebrow">mac-crypt skill</p>
+      <h2>Make any workflow<br><span class="grad">encryption-ready.</span></h2>
+      <p class="sub">Every workflow the app generates already speaks mac-crypt. Add two steps to your own workflows and the app can feed them encrypted inputs and read their encrypted outputs — on Linux, macOS and Windows runners.</p>
+      <div class="bento">
+        <div class="tile t-7">
+          <h3>Two steps</h3>
+          <div class="code">- uses: Ding-Ding-Projects/material-actions-creator/.github/actions/mac-crypt@main
+  with:
+    mode: open
+    key: ${{ secrets.MAC_KEY }}
+    input: src.mac
+    path: src
+
+# … your build …
+
+- uses: Ding-Ding-Projects/material-actions-creator/.github/actions/mac-crypt@main
+  with:
+    mode: seal
+    key: ${{ secrets.MAC_KEY }}
+    path: src
+    globs: dist/**/*.exe, dist/**/*.msi
+    output: out.mac</div>
+        </div>
+        <div class="tile t-5">
+          <h3>Or the CLI</h3>
+          <p>One self-contained file, Node built-ins only.</p>
+          <div class="code">node mac-crypt.mjs keygen
+node mac-crypt.mjs seal out.mac src "dist/**/*.exe"
+node mac-crypt.mjs open out.mac back</div>
+          <p style="margin-top:16px">Chunks are bound to their position and to an end marker, so a reordered, truncated or extended file fails to open. Bundles refuse paths that would escape the destination.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="recovery">
+    <div class="wrap">
+      <p class="eyebrow">If the app closes</p>
+      <h2>Builds don't stop<br><span class="grad">when the app does.</span></h2>
+      <div class="checks">
+        <div class="check"><span class="tag">Tab closed</span><h3>Nothing happens</h3><ul><li>The server keeps running builds</li><li>Reopen the page and it catches up live</li></ul></div>
+        <div class="check"><span class="tag">Server stopped</span><h3>Journal resumes</h3><ul><li>Every stage is written to <code>/data/journal.json</code></li><li>On start, each unfinished build is reattached to its run, its lap saps are downloaded and decrypted, and the repository is deleted</li><li>GitHub keeps artifacts for a day, so there's a day to come back</li></ul></div>
+        <div class="check"><span class="tag">Never came back</span><h3>Sweeper</h3><ul><li>At startup, <code>mac-tmp-*</code> and <code>mac-pub-*</code> repositories older than three hours that aren't in the journal are deleted</li><li>Or click <b>Sweep leftovers</b></li></ul></div>
       </div>
     </div>
   </section>
@@ -219,7 +295,11 @@ docker run --rm node-app:latest</div>
             <tr><td>DOWNLOAD_TTL_MINUTES</td><td>60</td><td>How long a finished image stays downloadable.</td></tr>
             <tr><td>POLL_INTERVAL_MS</td><td>5000</td><td>How often the workflow run is polled.</td></tr>
             <tr><td>KEEP_REPO_ON_FAILURE</td><td>false</td><td>Keep a failed build's repository for debugging.</td></tr>
-            <tr><td>SWEEP_ON_START</td><td>true</td><td>Delete <code>mac-tmp-*</code> repositories older than three hours at startup.</td></tr>
+            <tr><td>SWEEP_ON_START</td><td>true</td><td>Delete <code>mac-tmp-*</code> / <code>mac-pub-*</code> repositories older than three hours at startup.</td></tr>
+            <tr><td>GITHUB_APP_ID</td><td>—</td><td>GitHub App used to mint 1-hour keys for encrypted runs.</td></tr>
+            <tr><td>GITHUB_APP_PRIVATE_KEY</td><td>—</td><td>The App's private key (PEM; <code>\n</code> escapes allowed).</td></tr>
+            <tr><td>GITHUB_APP_INSTALLATION_ID</td><td>—</td><td>Installation on the owner org (needs Administration, Contents, Actions and Secrets write).</td></tr>
+            <tr><td>JOURNAL</td><td>true</td><td>Set <code>false</code> to disable the crash-recovery journal.</td></tr>
           </tbody>
         </table>
       </div>
@@ -233,6 +313,7 @@ docker run --rm node-app:latest</div>
       <p class="sub">The repository runs its own pipelines on every push.</p>
       <div class="checks">
         <div class="check"><span class="tag">ci.yml</span><h3>Unit + integration</h3><ul><li>Node 22 and 24</li><li>Fake GitHub API covering success, failure and cleanup paths</li><li>Fake <code>gh</code> binary for the device-code flow</li><li>Path-traversal and expression-injection guards</li></ul></div>
+        <div class="check"><span class="tag">ci.yml</span><h3>mac-crypt on every OS</h3><ul><li>Ubuntu, Windows and macOS runners</li><li>Seal → unpack → run a real <code>.bat</code> / <code>.sh</code> → seal → open</li><li>Wrong keys and plaintext leaks fail the job</li></ul></div>
         <div class="check"><span class="tag">ci.yml</span><h3>Workflow lint + container</h3><ul><li>actionlint on this repo's workflows and on generated build workflows</li><li>Docker image build</li><li>Container smoke test with bundled GitHub CLI</li></ul></div>
         <div class="check"><span class="tag">e2e.yml</span><h3>Live end-to-end</h3><ul><li>Builds a real image through a throwaway repository</li><li>Loads and runs the downloaded image</li><li>Proves the repository returns 404 afterwards</li><li>Needs the <code>E2E_GITHUB_TOKEN</code> secret</li></ul></div>
       </div>

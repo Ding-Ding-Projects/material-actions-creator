@@ -10,7 +10,8 @@ ENV NODE_ENV=production \
     GH_CONFIG_DIR=/data/gh
 
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 COPY src ./src
 COPY public ./public
 

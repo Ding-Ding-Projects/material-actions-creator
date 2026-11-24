@@ -8,7 +8,7 @@
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/app.css">
 </head>
 <body>
@@ -19,33 +19,105 @@
       <img src="/icon.svg" alt="" width="34" height="34">
       <span>Material<b>Actions</b>Creator</span>
     </a>
-    <div class="bar-right">
-      <button class="account" id="accountBtn" type="button" aria-haspopup="dialog">
-        <span class="avatar" id="avatar"></span>
-        <span class="account-text">
-          <span id="accountName">Not signed in</span>
-          <span class="scope-dots" id="scopeDots"></span>
-        </span>
-      </button>
-    </div>
+    <nav class="tabs-nav" role="tablist" aria-label="Sections">
+      <button role="tab" type="button" data-tab="workflows" aria-selected="true">Workflows</button>
+      <button role="tab" type="button" data-tab="dockerfile" aria-selected="false">Dockerfile</button>
+      <button role="tab" type="button" data-tab="runs" aria-selected="false">Runs <span class="live-count" id="liveCount" hidden>0</span></button>
+    </nav>
+    <button class="account" id="accountBtn" type="button" aria-haspopup="dialog">
+      <span class="avatar" id="avatar"></span>
+      <span class="account-text">
+        <span id="accountName">Not signed in</span>
+        <span class="scope-dots" id="scopeDots"></span>
+      </span>
+    </button>
   </header>
 
-  <main class="layout">
-    <section class="compose card-xl" aria-labelledby="composeTitle">
-      <div class="compose-head">
-        <p class="eyebrow">01 — Instructions</p>
-        <h1 id="composeTitle">Dockerfile in.<br><em>Image out.</em></h1>
-        <p class="lede">Each build spins up a private throwaway repository, runs it on GitHub Actions, hands you the image as a <code>.tar.gz</code>, then deletes the repository.</p>
+  <div class="recovery" id="recovery" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div>
+      <strong id="recoveryTitle">The app was offline</strong>
+      <span id="recoveryBody"></span>
+    </div>
+    <button class="btn quiet" type="button" id="recoveryView">View runs</button>
+    <button class="icon-btn" type="button" id="recoveryDismiss" aria-label="Dismiss">×</button>
+  </div>
+
+  <!-- Workflows: repository build scripts in, lap saps out -->
+  <main class="view layout" id="view-workflows" data-view="workflows">
+    <section class="stack-col">
+      <div class="hero-head">
+        <p class="eyebrow">New workflow</p>
+        <h1>Repo in.<br><em>Installer out.</em></h1>
       </div>
 
+      <div class="panel">
+        <p class="step">01 · Source</p>
+        <div class="field-row">
+          <label class="field grow"><span>Repository</span><input id="wfRepo" placeholder="owner/name" spellcheck="false" autocomplete="off"></label>
+          <label class="field"><span>Branch or tag</span><input id="wfRef" placeholder="default branch" spellcheck="false" autocomplete="off"></label>
+          <button class="btn scan" type="button" id="wfScan">Scan for scripts</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><p class="step">02 · Build scripts</p><span class="muted small" id="wfScriptHint">Scan a repository to find .bat, .cmd, .ps1 and .sh files</span></div>
+        <ol class="script-list" id="wfScripts"></ol>
+        <div class="add-script">
+          <input id="wfAddScript" placeholder="or type a path, e.g. build\installer.bat" spellcheck="false" aria-label="Script path">
+          <button class="btn" type="button" id="wfAddScriptBtn">Add</button>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="panel">
+          <p class="step">03 · Runner</p>
+          <div class="chips" id="wfRunners" role="radiogroup" aria-label="Runner"></div>
+        </div>
+        <div class="panel">
+          <p class="step">04 · Lap saps</p>
+          <label class="field"><span>Output files (globs, relative to the repository)</span>
+            <input id="wfOutputs" value="dist/**/*.exe, dist/**/*.msi" spellcheck="false"></label>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="step">05 · Where it runs</p>
+        <div class="modes" data-mode-group="wf"></div>
+      </div>
+    </section>
+
+    <aside class="stack-col sticky">
+      <div class="yaml-card">
+        <div class="yaml-head"><span>.github/workflows/build.yml</span><span class="ok" id="wfYamlState">live preview</span></div>
+        <pre id="wfYaml" class="yaml"></pre>
+      </div>
+      <div class="run-bar">
+        <span id="wfSummary" class="muted"></span>
+        <button class="fab" id="wfRun" type="button">Run build
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <p class="hint" id="wfHint"></p>
+      <button class="text-btn center" type="button" id="wfExport">Download workflow YAML</button>
+    </aside>
+  </main>
+
+  <!-- Dockerfile: instructions in, image out -->
+  <main class="view layout" id="view-dockerfile" data-view="dockerfile" hidden>
+    <section class="compose card-xl" aria-labelledby="composeTitle">
+      <p class="eyebrow">Dockerfile</p>
+      <h1 id="composeTitle">Dockerfile in.<br><em>Image out.</em></h1>
+      <p class="lede">Each build runs in a throwaway repository on GitHub Actions. The image comes back as a <code>.tar.gz</code> and the repository is deleted.</p>
+
       <div class="field-row">
-        <label class="field">
+        <label class="field grow">
           <span>Image name</span>
           <input id="imageName" value="my-app:latest" spellcheck="false" autocomplete="off">
         </label>
         <div class="field">
           <span>Platform</span>
-          <div class="segmented" id="platforms" role="radiogroup"></div>
+          <div class="segmented" id="platforms" role="radiogroup" aria-label="Platform"></div>
         </div>
       </div>
 
@@ -67,28 +139,37 @@
         <div id="argList"></div>
         <button class="text-btn" id="addArg" type="button">+ Add argument</button>
       </details>
+    </section>
 
-      <div class="actions">
-        <p class="hint" id="formHint"></p>
-        <button class="fab" id="buildBtn" type="button">
+    <aside class="stack-col sticky">
+      <div class="panel">
+        <p class="step">Where it runs</p>
+        <div class="modes stacked" data-mode-group="docker"></div>
+      </div>
+      <div class="run-bar">
+        <span class="muted" id="dockerSummary"></span>
+        <button class="fab" id="buildBtn" type="button">Build image
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Build image
         </button>
       </div>
-    </section>
+      <p class="hint" id="formHint"></p>
+    </aside>
+  </main>
 
-    <section class="runs" aria-labelledby="runsTitle">
-      <div class="runs-head">
-        <p class="eyebrow">02 — Runs</p>
-        <h2 id="runsTitle">Pipeline</h2>
-        <button class="text-btn" id="sweepBtn" type="button" title="Delete leftover temporary repositories">Sweep leftovers</button>
+  <!-- Runs -->
+  <main class="view runs-view" id="view-runs" data-view="runs" hidden>
+    <div class="runs-head">
+      <div>
+        <p class="eyebrow">Runs</p>
+        <h2>Pipeline</h2>
       </div>
-      <div id="runList" class="run-list"></div>
-      <div id="emptyRuns" class="empty">
-        <div class="empty-art" aria-hidden="true"><span></span><span></span><span></span></div>
-        <p>No builds yet. Your runs stream in here live.</p>
-      </div>
-    </section>
+      <button class="text-btn" id="sweepBtn" type="button" title="Delete leftover temporary repositories">Sweep leftovers</button>
+    </div>
+    <div id="runList" class="run-list"></div>
+    <div id="emptyRuns" class="empty">
+      <div class="empty-art" aria-hidden="true"><span></span><span></span><span></span></div>
+      <p>No builds yet. Start one from Workflows or Dockerfile — runs stream in here live, and keep going even if you close this page.</p>
+    </div>
   </main>
 
   <dialog id="authDialog" class="sheet">

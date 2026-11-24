@@ -1,0 +1,55 @@
+name: mac-crypt
+description: >-
+  Encryption skill for Material Actions Creator. "open" decrypts an encrypted
+  source bundle before a build; "seal" packs and encrypts build outputs so they
+  can be uploaded as a lap sap that only the app can read. Works on Linux,
+  macOS and Windows runners.
+inputs:
+  mode:
+    description: open or seal
+    required: true
+  key:
+    description: Base64 32-byte key, normally secrets.MAC_KEY
+    required: true
+  input:
+    description: "open: the encrypted bundle to read (default src.mac)"
+    required: false
+    default: src.mac
+  path:
+    description: "open: directory to unpack into. seal: base directory the globs are relative to"
+    required: false
+    default: .
+  globs:
+    description: "seal: comma or newline separated globs, relative to path"
+    required: false
+    default: '**/*'
+  output:
+    description: "seal: encrypted file to write (default out.mac)"
+    required: false
+    default: out.mac
+runs:
+  using: composite
+  steps:
+    - name: Check mode
+      shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+      run: |
+        case "$MODE" in open|seal) ;; *) echo "::error::mode must be open or seal"; exit 1;; esac
+    - name: Decrypt
+      if: inputs.mode == 'open'
+      shell: bash
+      env:
+        MAC_KEY: ${{ inputs.key }}
+        IN_FILE: ${{ inputs.input }}
+        DEST: ${{ inputs.path }}
+      run: node "$GITHUB_ACTION_PATH/../../../src/mac-crypt.mjs" open "$IN_FILE" "$DEST"
+    - name: Encrypt
+      if: inputs.mode == 'seal'
+      shell: bash
+      env:
+        MAC_KEY: ${{ inputs.key }}
+        OUT_FILE: ${{ inputs.output }}
+        BASE: ${{ inputs.path }}
+        GLOBS: ${{ inputs.globs }}
+      run: node "$GITHUB_ACTION_PATH/../../../src/mac-crypt.mjs" seal "$OUT_FILE" "$BASE" "$GLOBS"

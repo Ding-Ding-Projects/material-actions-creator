@@ -43,5 +43,5 @@ if (cleanup.state !== 'done') throw new Error(`Cleanup did not finish: ${cleanup
 const dl = await fetch(`${base}${job.downloadUrl}`, { headers });
 if (!dl.ok) throw new Error(`Download failed: ${dl.status}`);
 await writeFile(out, Buffer.from(await dl.arrayBuffer()));
-console.log(`Saved ${out} (${job.size} bytes), image tag ${tag}`);
+console.log(`Saved ${out} (${job.outputs[0].size} bytes), image tag ${tag}`);
 await writeFile(process.env.GITHUB_OUTPUT || '/dev/null', `tag=${tag}\nrepo=${job.owner}/${job.repo}\n`, { flag: 'a' });

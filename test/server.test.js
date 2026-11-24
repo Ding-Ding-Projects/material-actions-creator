@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { EventEmitter } from 'node:events';
 import { createApp } from '../src/server.js';
 import { GitHubClient } from '../src/github.js';
-import { fakeGitHub, makeZip } from './helpers.js';
+import { fakeGitHub } from './helpers.js';
 
 class FakeGhAuth extends EventEmitter {
   constructor() { super(); this.flow = { state: 'idle' }; this.loggedIn = false; }
@@ -21,15 +21,15 @@ class FakeGhAuth extends EventEmitter {
 let base;
 let app;
 let ghAuth;
-const image = Buffer.from('IMAGE-BYTES');
 
 before(async () => {
-  const gh = fakeGitHub({ artifactZip: makeZip([{ name: 'image.tar.gz', data: image }]) });
+  const gh = fakeGitHub();
   ghAuth = new FakeGhAuth();
   const dataDir = await mkdtemp(join(tmpdir(), 'srv-'));
   app = createApp({
     env: { GITHUB_OWNER: 'Ding-Ding-Projects', DATA_DIR: dataDir, POLL_INTERVAL_MS: '1', APP_ACCESS_KEY: 'sesame' },
     ghAuth,
+    githubApp: null,
     makeClient: (token) => new GitHubClient({ token, fetchImpl: gh.fetchImpl, sleepImpl: async () => {} }),
   });
   await new Promise((r) => app.server.listen(0, '127.0.0.1', r));
@@ -92,11 +92,44 @@ test('signed-out state, assisted login, then a full build and download', async (
   assert.equal((await fetch(`${base}/api/builds/${id}/download`)).status, 401);
   const dl = await fetch(`${base}/api/builds/${id}/download?key=sesame`);
   assert.equal(dl.status, 200);
-  assert.match(dl.headers.get('content-disposition'), /demo_2\.tar\.gz/);
-  assert.ok(Buffer.from(await dl.arrayBuffer()).equals(image));
+  assert.match(dl.headers.get('content-disposition'), /image\.tar\.gz/);
+  assert.equal(await dl.text(), 'IMAGE:FROM alpine\n');
+  assert.equal((await fetch(`${base}/api/builds/${id}/files/9?key=sesame`)).status, 404);
 
   assert.equal((await call(`/api/builds/${id}`, { method: 'DELETE' })).status, 200);
   assert.equal((await call(`/api/builds/${id}`)).status, 404);
+});
+
+test('scans a repository for build scripts and previews workflows', async () => {
+  ghAuth.loggedIn = true;
+  const scan = await (await call('/api/scripts?repo=Ding-Ding-Projects/map-editor')).json();
+  assert.equal(scan.ref, 'main');
+  assert.deepEqual(scan.scripts, ['build/installer.bat', 'tools/clean.cmd']);
+  assert.equal(scan.outputsGuess, 'dist/**/*.exe, dist/**/*.msi');
+  assert.equal((await call('/api/scripts?repo=bad')).status, 400);
+
+  const preview = await (await call('/api/preview', { method: 'POST', body: { kind: 'scripts', repo: 'Ding-Ding-Projects/map-editor', scripts: ['build/installer.bat'], outputs: 'dist/*.exe', mode: 'encrypted-public' } })).json();
+  assert.match(preview.yaml, /crypt\.mjs seal out\.mac/);
+  assert.equal((await call('/api/preview', { method: 'POST', body: { kind: 'scripts' } })).status, 400);
+});
+
+test('encrypted script build through the API lists decrypted lap saps', async () => {
+  ghAuth.loggedIn = true;
+  const res = await call('/api/builds', { method: 'POST', body: { kind: 'scripts', repo: 'Ding-Ding-Projects/map-editor', ref: 'main', scripts: ['build/installer.bat'], outputs: 'dist/**/*.exe', mode: 'encrypted-public' } });
+  assert.equal(res.status, 202);
+  const { id } = await res.json();
+  await app.jobs.jobs.get(id).promise;
+  const job = await (await call(`/api/builds/${id}`)).json();
+  assert.equal(job.status, 'ready', job.error);
+  assert.equal(job.outputs.length, 2);
+  const msi = job.outputs.find((o) => o.name.endsWith('.msi'));
+  const dl = await fetch(`${base}${msi.url}?key=sesame`);
+  assert.equal(await dl.text(), 'MSI');
+  assert.match(dl.headers.get('content-disposition'), /filename="Setup-1\.0\.msi"/);
+  const cfg = await (await call('/api/config')).json();
+  assert.ok(cfg.runners.includes('windows-latest'));
+  assert.deepEqual(cfg.modes, ['private', 'encrypted-public']);
+  assert.equal((await (await call('/api/recovery')).json()), null);
 });
 
 test('streams build updates over server-sent events', async () => {

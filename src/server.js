@@ -7,7 +7,8 @@ import { timingSafeEqual } from 'node:crypto';
 import { GitHubClient } from './github.js';
 import { GhAuth, missingScopes, REQUIRED_SCOPES } from './ghauth.js';
 import { JobManager } from './jobs.js';
-import { validateRequest, PLATFORMS, ValidationError } from './workflow.js';
+import { validateRequest, renderWorkflow, PLATFORMS, RUNNERS, MODES, ValidationError } from './workflow.js';
+import { GitHubApp } from './githubapp.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const PUBLIC_DIR = join(ROOT, 'public');
@@ -32,8 +33,12 @@ export function createApp(opts = {}) {
     return makeClient(token);
   }
 
+  const githubApp = opts.githubApp !== undefined ? opts.githubApp : GitHubApp.fromEnv(env);
   const jobs = opts.jobs || new JobManager({
     getClient,
+    makeClient,
+    app: githubApp,
+    journal: opts.journal !== undefined ? opts.journal : env.JOURNAL !== 'false',
     owner: env.GITHUB_OWNER || '',
     dataDir: env.DATA_DIR || join(ROOT, 'data'),
     pollMs: Number(env.POLL_INTERVAL_MS || 5000),
@@ -48,6 +53,7 @@ export function createApp(opts = {}) {
   };
   jobs.on('update', (job) => broadcast('build', job));
   jobs.on('remove', (id) => broadcast('remove', { id }));
+  jobs.on('recovery', (r) => broadcast('recovery', r));
   ghAuth.on('update', (flow) => broadcast('auth', flow));
 
   function authorized(req, url) {
@@ -91,14 +97,34 @@ export function createApp(opts = {}) {
 
   async function api(req, res, url) {
     const { pathname } = url;
-    const m = pathname.match(/^\/api\/builds\/([a-f0-9]+)(\/download)?$/);
+    const m = pathname.match(/^\/api\/builds\/([a-f0-9]+)(\/download|\/files\/(\d+))?$/);
 
     if (pathname === '/api/health') return json(res, 200, { ok: true });
     if (!authorized(req, url)) return json(res, 401, { error: 'Access key required.', accessKeyRequired: true });
 
     if (pathname === '/api/config' && req.method === 'GET') {
-      return json(res, 200, { platforms: PLATFORMS, owner: env.GITHUB_OWNER || null, ttlMinutes: Number(env.DOWNLOAD_TTL_MINUTES || 60) });
+      return json(res, 200, {
+        platforms: PLATFORMS, runners: RUNNERS, modes: MODES, owner: env.GITHUB_OWNER || null,
+        ttlMinutes: Number(env.DOWNLOAD_TTL_MINUTES || 60), githubApp: Boolean(githubApp),
+      });
     }
+    if (pathname === '/api/preview' && req.method === 'POST') {
+      return json(res, 200, { yaml: renderWorkflow(validateRequest(await body(req))) });
+    }
+    if (pathname === '/api/scripts' && req.method === 'GET') {
+      const repo = (url.searchParams.get('repo') || '').trim().replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '');
+      if (!/^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/.test(repo)) throw new ValidationError('Repository must look like owner/name.');
+      const [o, r] = repo.split('/');
+      const gh = await getClient();
+      const info = await gh.getRepo(o, r);
+      const ref = url.searchParams.get('ref') || info.default_branch;
+      const tree = await gh.getTree(o, r, ref);
+      const scripts = (tree.tree || []).filter((t) => t.type === 'blob' && /\.(bat|cmd|ps1|sh)$/i.test(t.path)).map((t) => t.path).slice(0, 200);
+      const guess = (tree.tree || []).some((t) => /^(dist|out|build|release)\//i.test(t.path)) ? 'dist/**/*.exe, dist/**/*.msi' : '**/*.exe, **/*.msi';
+      return json(res, 200, { repo, ref, defaultBranch: info.default_branch, private: info.private, scripts, outputsGuess: guess, truncated: Boolean(tree.truncated) });
+    }
+    if (pathname === '/api/recovery' && req.method === 'GET') return json(res, 200, jobs.recoveryView());
+    if (pathname === '/api/recovery/dismiss' && req.method === 'POST') { jobs.dismissRecovery(); return json(res, 200, { ok: true }); }
     if (pathname === '/api/auth' && req.method === 'GET') return json(res, 200, await authInfo());
     if (pathname === '/api/auth/login' && req.method === 'POST') {
       const { mode } = await body(req);
@@ -112,7 +138,7 @@ export function createApp(opts = {}) {
     }
     if (pathname === '/api/events' && req.method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
-      res.write(`event: hello\ndata: ${JSON.stringify({ builds: jobs.list(), auth: ghAuth.status() })}\n\n`);
+      res.write(`event: hello\ndata: ${JSON.stringify({ builds: jobs.list(), auth: ghAuth.status(), recovery: jobs.recoveryView() })}\n\n`);
       clients.add(res);
       const ping = setInterval(() => res.write(': ping\n\n'), 25000);
       req.on('close', () => { clearInterval(ping); clients.delete(res); });
@@ -133,13 +159,16 @@ export function createApp(opts = {}) {
       return (await jobs.remove(m[1])) ? json(res, 200, { ok: true }) : json(res, 409, { error: 'Build is running or missing.' });
     }
     if (m && m[2] && req.method === 'GET') {
+      const index = m[3] ? Number(m[3]) : 0;
       const job = jobs.get(m[1]);
-      const file = jobs.filePath(m[1]);
+      const file = jobs.filePath(m[1], index);
       if (!job || !file) return json(res, 404, { error: 'Download not available.' });
+      const name = jobs.fileName(m[1], index).replace(/["\\\r\n]/g, '_');
       res.writeHead(200, {
-        'Content-Type': 'application/gzip',
-        'Content-Disposition': `attachment; filename="${job.fileName}"`,
-        ...(job.size ? { 'Content-Length': job.size } : {}),
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+        'Content-Length': job.outputs[index].size,
+        'X-Content-Type-Options': 'nosniff',
       });
       createReadStream(file).pipe(res);
       return;
@@ -179,8 +208,18 @@ export function createApp(opts = {}) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const port = Number(process.env.PORT || 8080);
   const { server, jobs } = createApp();
+  const recovery = await jobs.load();
+  if (recovery) console.log(`Resumed ${recovery.jobs.length} build(s) after ${Math.round(recovery.offlineMs / 1000)}s offline`);
+  jobs.startHeartbeat();
   server.listen(port, () => console.log(`material-actions-creator listening on http://0.0.0.0:${port}`));
   if (process.env.SWEEP_ON_START !== 'false') {
     jobs.sweep().then((d) => d.length && console.log(`Swept ${d.length} leftover repos`)).catch(() => {});
   }
+  const shutdown = async (sig) => {
+    console.log(`${sig}: saving the journal; running builds resume on next start`);
+    await jobs.stop();
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }

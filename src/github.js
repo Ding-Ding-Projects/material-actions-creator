@@ -60,8 +60,8 @@ export class GitHubClient {
     return data.type; // "User" | "Organization"
   }
 
-  async createRepo(owner, name, { isOrg, description }) {
-    const payload = { name, description, private: true, auto_init: false, has_issues: false, has_wiki: false, has_projects: false };
+  async createRepo(owner, name, { isOrg, description, isPrivate = true }) {
+    const payload = { name, description, private: isPrivate, auto_init: false, has_issues: false, has_wiki: false, has_projects: false };
     return isOrg
       ? this.request('POST', `/orgs/${encodeURIComponent(owner)}/repos`, payload)
       : this.request('POST', '/user/repos', payload);
@@ -71,8 +71,32 @@ export class GitHubClient {
     const encoded = path.split('/').map(encodeURIComponent).join('/');
     return this.request('PUT', `/repos/${owner}/${repo}/contents/${encoded}`, {
       message,
-      content: Buffer.from(content, 'utf8').toString('base64'),
+      content: (Buffer.isBuffer(content) ? content : Buffer.from(content, 'utf8')).toString('base64'),
     });
+  }
+
+  async getRepo(owner, repo) {
+    return this.request('GET', `/repos/${owner}/${repo}`);
+  }
+
+  async getTree(owner, repo, ref) {
+    return this.request('GET', `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`);
+  }
+
+  async downloadTarball(owner, repo, ref) {
+    return this.request('GET', `/repos/${owner}/${repo}/tarball/${encodeURIComponent(ref)}`, null, { raw: true });
+  }
+
+  async secretsPublicKey(owner, repo) {
+    return this.request('GET', `/repos/${owner}/${repo}/actions/secrets/public-key`);
+  }
+
+  async putSecret(owner, repo, name, encryptedValue, keyId) {
+    return this.request('PUT', `/repos/${owner}/${repo}/actions/secrets/${name}`, { encrypted_value: encryptedValue, key_id: keyId });
+  }
+
+  async revokeInstallationToken() {
+    return this.request('DELETE', '/installation/token', null, { allow404: true });
   }
 
   async setTopics(owner, repo, names) {
