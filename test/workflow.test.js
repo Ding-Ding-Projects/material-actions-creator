@@ -78,9 +78,11 @@ test('script requests validate repo, scripts, runner and outputs', () => {
 test('script workflow runs each script through env, never inline', () => {
   const yml = renderWorkflow(validateRequest({ ...scripts, scripts: ['build\\installer.bat', 'tools/pack.ps1', 'tools/x.sh'], runner: 'windows-2022' }));
   assert.match(yml, /runs-on: windows-2022/);
-  assert.match(yml, /shell: cmd\n\s+working-directory: src\n\s+env:\n\s+SCRIPT: "build\\\\installer\.bat"\n\s+run: call "%SCRIPT%"/);
+  assert.match(yml, /shell: cmd\n\s+working-directory: src\n\s+env:\n\s+SCRIPT: "build\\\\installer\.bat"\n\s+run: \|\n\s+call "%SCRIPT%"/);
   assert.match(yml, /shell: pwsh[\s\S]+SCRIPT: "tools\/pack\.ps1"/);
-  assert.match(yml, /shell: bash[\s\S]+SCRIPT: "tools\/x\.sh"\n\s+run: bash "\.\/\$SCRIPT"/);
+  assert.match(yml, /shell: bash[\s\S]+SCRIPT: "tools\/x\.sh"\n\s+run: \|\n\s+bash "\.\/\$SCRIPT"/);
+  // Plain scalars must never start with YAML indicators such as & or *.
+  assert.doesNotMatch(yml, /run: [&*!>'"%@`]/);
   assert.match(yml, /tar -xzf src\.tar\.gz --strip-components=1 -C src/);
   assert.match(yml, /src\/dist\/\*\*\/\*\.exe\n\s+src\/dist\/\*\*\/\*\.msi/);
   assert.doesNotMatch(yml, /MAC_KEY/);

@@ -204,7 +204,8 @@ function scriptStep(script, i) {
         working-directory: src
         env:
           SCRIPT: ${q(p)}
-        run: ${call}
+        run: |
+          ${call}
 `;
 }
 
