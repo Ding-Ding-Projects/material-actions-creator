@@ -41,6 +41,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install
+        run: npm ci
       - name: Render sample build workflows
         run: npm run render-workflow -- rendered
       - name: Lint this repository's workflows
