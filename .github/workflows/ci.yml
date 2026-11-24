@@ -63,7 +63,7 @@ jobs:
         run: docker run -d --name mac -p 8080:8080 -e SWEEP_ON_START=false material-actions-creator:ci
       - name: Smoke test
         run: |
-          for i in $(seq 1 30); do curl -fsS http://localhost:8080/api/health && break; sleep 1; done
+          for _ in $(seq 1 30); do curl -fsS http://localhost:8080/api/health && break; sleep 1; done
           curl -fsS http://localhost:8080/ | grep -q "Material Actions Creator"
           curl -fsS http://localhost:8080/api/auth | tee auth.json
           grep -q '"ghAvailable":true' auth.json
