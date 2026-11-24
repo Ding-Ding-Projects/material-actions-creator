@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Material Actions Creator — Dockerfile in, image out</title>
+  <meta name="description" content="Build Docker images on GitHub Actions from a Dockerfile, download them as a .tar.gz, and leave no repository behind.">
+  <meta name="theme-color" content="#0b0c10">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink-0:#0b0c10; --ink-1:#12141b; --ink-2:#191c25; --ink-3:#232733; --line:#2c3140; --text:#eef0f6; --muted:#8d93a8; --lime:#d4ff3a; --mint:#7cf5c8; --violet:#b69cff; --coral:#ff7a6b; --on-lime:#141a00; --display:'Bricolage Grotesque',ui-sans-serif,system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace; --ease:cubic-bezier(.2,.9,.1,1); color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; font-family: var(--display); background: var(--ink-0); color: var(--text); -webkit-font-smoothing: antialiased; line-height: 1.55; }
+    a { color: var(--lime); text-underline-offset: 4px; }
+    code { font-family: var(--mono); font-size: .88em; background: var(--ink-3); padding: .12em .42em; border-radius: 6px; }
+    .wrap { max-width: 1240px; margin: 0 auto; padding: 0 clamp(18px, 4vw, 48px); }
+    .aurora { position: absolute; inset: 0 0 auto; height: 900px; z-index: -1; pointer-events: none; background: radial-gradient(40% 40% at 12% 18%, rgba(212,255,58,.14), transparent 70%), radial-gradient(35% 40% at 85% 8%, rgba(182,156,255,.18), transparent 70%), radial-gradient(30% 30% at 60% 55%, rgba(124,245,200,.08), transparent 70%); filter: blur(24px); }
+    body::after { content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .05; z-index: -1; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+    nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(18px) saturate(1.4); background: rgba(11,12,16,.62); border-bottom: 1px solid rgba(255,255,255,.04); }
+    nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+    .brand { display: flex; gap: 12px; align-items: center; color: var(--text); text-decoration: none; font-size: 18px; }
+    .brand b { color: var(--lime); font-weight: 800; margin: 0 .12em; }
+    .links { display: flex; gap: 26px; font-size: 15px; }
+    .links a { color: var(--muted); text-decoration: none; }
+    .links a:hover { color: var(--text); }
+    @media (max-width: 760px) { .links a:not(.gh) { display: none; } }
+
+    .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; padding: clamp(56px, 9vw, 120px) 0 clamp(48px, 7vw, 96px); }
+    @media (max-width: 980px) { .hero { grid-template-columns: 1fr; } }
+    .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+    h1 { font-size: clamp(48px, 7vw, 104px); line-height: .88; letter-spacing: -.05em; margin: 0 0 26px; font-weight: 800; }
+    h1 em, .grad { font-style: normal; background: linear-gradient(90deg, var(--lime), var(--mint) 55%, var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .lede { font-size: clamp(18px, 1.7vw, 21px); color: var(--muted); max-width: 54ch; margin: 0 0 34px; }
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; }
+    .fab { display: inline-flex; align-items: center; gap: 10px; background: var(--lime); color: var(--on-lime); font-weight: 800; font-size: 17px; padding: 17px 26px; border-radius: 22px; text-decoration: none; box-shadow: 0 14px 40px -12px rgba(212,255,58,.55); transition: border-radius .35s var(--ease), transform .3s var(--ease); }
+    .fab:hover { border-radius: 30px; transform: translateY(-2px); }
+    .ghost { display: inline-flex; align-items: center; gap: 10px; color: var(--text); border: 1px solid var(--line); padding: 16px 24px; border-radius: 22px; text-decoration: none; font-weight: 600; }
+    .ghost:hover { border-color: var(--text); }
+
+    /* Animated pipeline visual */
+    .machine { position: relative; background: linear-gradient(180deg, rgba(25,28,37,.92), rgba(18,20,27,.92)); border: 1px solid var(--line); border-radius: 32px; padding: 28px; box-shadow: 0 40px 100px -40px rgba(0,0,0,.9); }
+    .machine .file { white-space: pre; overflow-x: auto; font: 13px/1.7 var(--mono); background: var(--ink-0); border-radius: 18px; padding: 16px 18px; border: 1px solid var(--ink-3); }
+    .kw { color: var(--lime); font-weight: 600; } .str { color: var(--mint); } .com { color: #5b6178; }
+    .steps { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 10px; }
+    .steps li { display: grid; grid-template-columns: 14px 1fr auto; gap: 12px; align-items: center; font-size: 14px; color: var(--muted); animation: stepOn 9s infinite; animation-delay: calc(var(--i) * 1.1s); }
+    .steps li::before { content: ''; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); animation: dotOn 9s infinite; animation-delay: inherit; }
+    .steps li span:last-child { font: 12px var(--mono); }
+    @keyframes stepOn { 0% { color: var(--muted); } 6%, 85% { color: var(--text); } 100% { color: var(--muted); } }
+    @keyframes dotOn { 0% { background: transparent; border-color: var(--line); } 6%, 85% { background: var(--lime); border-color: var(--lime); } 100% { background: transparent; border-color: var(--line); } }
+    .steps li.del { animation-name: stepDel; }
+    @keyframes stepDel { 0% { color: var(--muted); } 6%, 85% { color: var(--coral); } 100% { color: var(--muted); } }
+    .out { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: 16px; background: rgba(212,255,58,.08); border: 1px dashed rgba(212,255,58,.35); font: 13px var(--mono); color: var(--lime); animation: pop 9s infinite; }
+    @keyframes pop { 0%, 72% { opacity: .2; transform: translateY(6px); } 78%, 95% { opacity: 1; transform: none; } 100% { opacity: .2; } }
+
+    section { padding: clamp(56px, 8vw, 110px) 0; border-top: 1px solid rgba(255,255,255,.05); }
+    h2 { font-size: clamp(36px, 5vw, 68px); line-height: .95; letter-spacing: -.045em; margin: 0 0 20px; font-weight: 800; }
+    h3 { font-size: 22px; letter-spacing: -.02em; margin: 0 0 8px; }
+    .sub { color: var(--muted); max-width: 62ch; font-size: 18px; margin: 0 0 40px; }
+
+    .flow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; counter-reset: s; }
+    @media (max-width: 1000px) { .flow { grid-template-columns: repeat(2, 1fr); } }
+    .flow div { counter-increment: s; background: var(--ink-1); border: 1px solid var(--line); border-radius: 22px; padding: 22px 20px 24px; position: relative; min-height: 190px; }
+    .flow div::before { content: counter(s, decimal-leading-zero); font: 600 12px var(--mono); color: var(--lime); display: block; margin-bottom: 40px; }
+    .flow div:last-child::before { color: var(--coral); }
+    .flow p { margin: 0; color: var(--muted); font-size: 14px; }
+
+    .bento { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
+    .tile { background: var(--ink-1); border: 1px solid var(--line); border-radius: 26px; padding: 28px; }
+    .tile p { color: var(--muted); margin: 0; }
+    .t-7 { grid-column: span 7; } .t-5 { grid-column: span 5; } .t-4 { grid-column: span 4; } .t-8 { grid-column: span 8; }
+    @media (max-width: 900px) { .bento > * { grid-column: 1 / -1 !important; } }
+    .tile.hot { background: var(--lime); color: var(--on-lime); border-color: var(--lime); }
+    .tile.hot p { color: #3a4512; }
+    .code { position: relative; font: 14px/1.7 var(--mono); background: var(--ink-0); border: 1px solid var(--ink-3); border-radius: 18px; padding: 18px 20px; overflow-x: auto; white-space: pre; margin: 18px 0 0; color: var(--text); }
+    .copy { position: absolute; top: 10px; right: 10px; border: 1px solid var(--line); background: var(--ink-2); color: var(--text); font: 600 12px var(--display); padding: 6px 10px; border-radius: 10px; cursor: pointer; }
+    .scope { display: inline-block; font: 600 13px var(--mono); padding: 6px 12px; border-radius: 99px; background: rgba(124,245,200,.12); color: var(--mint); margin: 4px 6px 0 0; }
+    .device { margin-top: 18px; display: inline-flex; padding: 14px 20px; border: 1px solid var(--lime); border-radius: 18px; font: 700 30px var(--mono); letter-spacing: .08em; color: var(--lime); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    th, td { text-align: left; padding: 14px 12px; border-bottom: 1px solid var(--ink-3); vertical-align: top; }
+    th { font: 600 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    td:first-child { font-family: var(--mono); color: var(--lime); white-space: nowrap; }
+    td:nth-child(2) { font-family: var(--mono); color: var(--muted); }
+    .table-wrap { overflow-x: auto; background: var(--ink-1); border: 1px solid var(--line); border-radius: 26px; padding: 10px 18px; }
+
+    .checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    @media (max-width: 900px) { .checks { grid-template-columns: 1fr; } }
+    .check { border: 1px solid var(--line); border-radius: 22px; padding: 24px; background: var(--ink-1); }
+    .check .tag { font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--violet); }
+    .check ul { margin: 12px 0 0; padding-left: 18px; color: var(--muted); }
+
+    footer { padding: 48px 0 64px; color: var(--muted); font-size: 14px; border-top: 1px solid rgba(255,255,255,.05); }
+    footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"></div>
+  <nav>
+    <div class="wrap">
+      <a class="brand" href="#"><img src="icon.svg" width="32" height="32" alt=""> <span>Material<b>Actions</b>Creator</span></a>
+      <div class="links">
+        <a href="#how">How it works</a>
+        <a href="#start">Quick start</a>
+        <a href="#config">Config</a>
+        <a href="#tests">Tests</a>
+        <a class="gh" href="https://github.com/Ding-Ding-Projects/material-actions-creator">GitHub ↗</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="wrap hero">
+    <div>
+      <p class="eyebrow">Self-hosted · GitHub Actions · Zero leftovers</p>
+      <h1>Dockerfile in.<br><em>Image out.</em></h1>
+      <p class="lede">Paste build instructions, hit build. A private throwaway repository runs your build on GitHub Actions, the image comes back as a <code>.tar.gz</code> you can <code>docker load</code>, and the repository is deleted the moment it's done.</p>
+      <div class="cta">
+        <a class="fab" href="#start">Run it in one command →</a>
+        <a class="ghost" href="https://github.com/Ding-Ding-Projects/material-actions-creator">View source</a>
+      </div>
+    </div>
+    <div class="machine" aria-hidden="true">
+      <div class="file"><span class="com"># Dockerfile</span>
+<span class="kw">FROM</span> node:22-alpine
+<span class="kw">WORKDIR</span> /app
+<span class="kw">COPY</span> server.js .
+<span class="kw">CMD</span> [<span class="str">"node"</span>, <span class="str">"server.js"</span>]</div>
+      <ol class="steps">
+        <li style="--i:0"><span>Create temporary repository</span><span>mac-tmp-4f1c</span></li>
+        <li style="--i:1"><span>Commit Dockerfile + workflow</span><span>4 files</span></li>
+        <li style="--i:2"><span>Start workflow run</span><span>run #1</span></li>
+        <li style="--i:3"><span>Build on GitHub Actions</span><span>buildx</span></li>
+        <li style="--i:4"><span>Download image artifact</span><span>48 MB</span></li>
+        <li style="--i:5" class="del"><span>Delete temporary repository</span><span>gone</span></li>
+      </ol>
+      <div class="out"><span>↓ node-app_latest.tar.gz</span><span>ready</span></div>
+    </div>
+  </header>
+
+  <section id="how">
+    <div class="wrap">
+      <p class="eyebrow">How it works</p>
+      <h2>Six stages.<br><span class="grad">Nothing left behind.</span></h2>
+      <p class="sub">Every build is isolated in its own private repository, so builds never share state, never touch your real projects, and never linger.</p>
+      <div class="flow">
+        <div><h3>Repo</h3><p>A private <code>mac-tmp-*</code> repository is created under your user or organization.</p></div>
+        <div><h3>Commit</h3><p>Your Dockerfile and extra files land in <code>context/</code>, next to a generated workflow.</p></div>
+        <div><h3>Dispatch</h3><p>The workflow is started with <code>workflow_dispatch</code> — no push triggers, no surprises.</p></div>
+        <div><h3>Build</h3><p>Buildx (plus QEMU for non-x86 targets) builds the image and saves it with <code>docker save</code>.</p></div>
+        <div><h3>Download</h3><p>The artifact streams to the server and is unpacked into a plain <code>.tar.gz</code>.</p></div>
+        <div><h3>Delete</h3><p>The repository is deleted whether the build passed or failed. A sweeper catches anything a crash left behind.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="start">
+    <div class="wrap">
+      <p class="eyebrow">Quick start</p>
+      <h2>One container.<br><span class="grad">One sign-in.</span></h2>
+      <div class="bento">
+        <div class="tile t-7">
+          <h3>Run it</h3>
+          <p>The image bundles GitHub CLI. Mount a volume so the sign-in survives restarts.</p>
+          <div class="code">docker build -t material-actions-creator .
+docker run -d --name mac -p 8080:8080 \
+  -v mac-data:/data \
+  -e GITHUB_OWNER=Ding-Ding-Projects \
+  material-actions-creator</div>
+        </div>
+        <div class="tile t-5">
+          <h3>Assisted sign-in</h3>
+          <p>Click <b>Sign in with GitHub CLI</b>. The server runs <code>gh auth login --web</code> and shows the device code right in the app:</p>
+          <div class="device">7F3K-Q9XD</div>
+          <p style="margin-top:16px">Already signed in without the right scopes? <b>Add missing scopes</b> runs <code>gh auth refresh</code>.</p>
+        </div>
+        <div class="tile t-4 hot">
+          <h3>Scopes requested</h3>
+          <p>Exactly what the pipeline needs — nothing more.</p>
+          <p style="margin-top:14px;font:600 15px var(--mono);color:var(--on-lime)">repo · workflow · delete_repo · read:org</p>
+        </div>
+        <div class="tile t-8">
+          <h3>Use the image</h3>
+          <p>Downloads stay available for an hour by default, then they're wiped from disk.</p>
+          <div class="code">docker load -i node-app_latest.tar.gz
+docker run --rm node-app:latest</div>
+        </div>
+        <div class="tile t-7">
+          <h3>Prefer a token?</h3>
+          <p>Set <code>GITHUB_TOKEN</code> to a classic personal access token with the same scopes and the CLI sign-in is skipped.</p>
+        </div>
+        <div class="tile t-5">
+          <h3>Lock it down</h3>
+          <p>Set <code>APP_ACCESS_KEY</code> and the API asks for a key before anyone can build or download.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="config">
+    <div class="wrap">
+      <p class="eyebrow">Configuration</p>
+      <h2>Environment</h2>
+      <p class="sub">Everything is an environment variable. Defaults are tuned for a single-user box.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Variable</th><th>Default</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>GITHUB_OWNER</td><td>signed-in user</td><td>User or organization that owns the temporary repositories.</td></tr>
+            <tr><td>GITHUB_TOKEN</td><td>—</td><td>Token to use instead of the GitHub CLI sign-in.</td></tr>
+            <tr><td>APP_ACCESS_KEY</td><td>—</td><td>Require this key for every API call and download.</td></tr>
+            <tr><td>PORT</td><td>8080</td><td>HTTP port.</td></tr>
+            <tr><td>DATA_DIR</td><td>/data/builds</td><td>Where downloaded images are kept until they expire.</td></tr>
+            <tr><td>GH_CONFIG_DIR</td><td>/data/gh</td><td>Where GitHub CLI keeps its sign-in.</td></tr>
+            <tr><td>DOWNLOAD_TTL_MINUTES</td><td>60</td><td>How long a finished image stays downloadable.</td></tr>
+            <tr><td>POLL_INTERVAL_MS</td><td>5000</td><td>How often the workflow run is polled.</td></tr>
+            <tr><td>KEEP_REPO_ON_FAILURE</td><td>false</td><td>Keep a failed build's repository for debugging.</td></tr>
+            <tr><td>SWEEP_ON_START</td><td>true</td><td>Delete <code>mac-tmp-*</code> repositories older than three hours at startup.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="tests">
+    <div class="wrap">
+      <p class="eyebrow">Quality</p>
+      <h2>Tested on<br><span class="grad">GitHub Actions too.</span></h2>
+      <p class="sub">The repository runs its own pipelines on every push.</p>
+      <div class="checks">
+        <div class="check"><span class="tag">ci.yml</span><h3>Unit + integration</h3><ul><li>Node 22 and 24</li><li>Fake GitHub API covering success, failure and cleanup paths</li><li>Fake <code>gh</code> binary for the device-code flow</li><li>Path-traversal and expression-injection guards</li></ul></div>
+        <div class="check"><span class="tag">ci.yml</span><h3>Workflow lint + container</h3><ul><li>actionlint on this repo's workflows and on generated build workflows</li><li>Docker image build</li><li>Container smoke test with bundled GitHub CLI</li></ul></div>
+        <div class="check"><span class="tag">e2e.yml</span><h3>Live end-to-end</h3><ul><li>Builds a real image through a throwaway repository</li><li>Loads and runs the downloaded image</li><li>Proves the repository returns 404 afterwards</li><li>Needs the <code>E2E_GITHUB_TOKEN</code> secret</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <span>Material Actions Creator · MIT</span>
+      <a href="https://github.com/Ding-Ding-Projects/material-actions-creator">github.com/Ding-Ding-Projects/material-actions-creator</a>
+    </div>
+  </footer>
+</body>
+</html>

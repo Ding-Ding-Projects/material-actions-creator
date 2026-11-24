@@ -1,0 +1,70 @@
+name: Live end-to-end
+# Builds a real image through a throwaway repository, downloads it, loads it,
+# runs it, and proves the temporary repository was deleted.
+# Needs the E2E_GITHUB_TOKEN secret (classic PAT: repo, workflow, delete_repo).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 9 * * 1'
+  push:
+    branches: [main]
+    paths: ['src/**', 'Dockerfile', '.github/workflows/e2e.yml', 'scripts/e2e.js']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      HAS_TOKEN: ${{ secrets.E2E_GITHUB_TOKEN != '' }}
+    steps:
+      - name: Skip when no token is configured
+        if: env.HAS_TOKEN != 'true'
+        run: echo "::notice::E2E_GITHUB_TOKEN is not set; skipping the live end-to-end test."
+      - uses: actions/checkout@v4
+        if: env.HAS_TOKEN == 'true'
+      - uses: actions/setup-node@v4
+        if: env.HAS_TOKEN == 'true'
+        with:
+          node-version: 22
+      - name: Build app image
+        if: env.HAS_TOKEN == 'true'
+        run: docker build -t material-actions-creator:e2e .
+      - name: Start app
+        if: env.HAS_TOKEN == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.E2E_GITHUB_TOKEN }}
+        run: |
+          docker run -d --name mac -p 8080:8080 \
+            -e GITHUB_TOKEN -e GITHUB_OWNER="${{ github.repository_owner }}" \
+            -e POLL_INTERVAL_MS=4000 -e SWEEP_ON_START=false material-actions-creator:e2e
+          for i in $(seq 1 30); do curl -fsS http://localhost:8080/api/health && break; sleep 1; done
+      - name: Build an image through the app
+        id: build
+        if: env.HAS_TOKEN == 'true'
+        run: node scripts/e2e.js
+      - name: Load and run the downloaded image
+        if: env.HAS_TOKEN == 'true'
+        run: |
+          docker load -i e2e-image.tar.gz
+          docker run --rm "${{ steps.build.outputs.tag }}" | tee out.txt
+          grep -q "hello from material-actions-creator" out.txt
+          grep -q "e2e ok" out.txt
+      - name: Temporary repository is gone
+        if: env.HAS_TOKEN == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.E2E_GITHUB_TOKEN }}
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ steps.build.outputs.repo }}")
+          echo "GET repo -> $code"
+          test "$code" = "404"
+      - name: App logs
+        if: always() && env.HAS_TOKEN == 'true'
+        run: docker logs mac || true

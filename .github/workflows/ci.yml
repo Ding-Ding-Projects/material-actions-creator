@@ -1,0 +1,76 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit + integration tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Syntax check
+        run: npm run check
+      - name: Test
+        run: npm test
+
+  lint-workflows:
+    name: Lint repo + generated workflows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Render sample build workflows
+        run: npm run render-workflow -- rendered
+      - name: Lint this repository's workflows
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
+      - name: Lint generated workflows
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color rendered/amd64.yml rendered/arm64-args.yml
+
+  docker:
+    name: Docker image build + smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: material-actions-creator:ci
+      - name: GitHub CLI is bundled
+        run: docker run --rm --entrypoint gh material-actions-creator:ci --version
+      - name: Start container
+        run: docker run -d --name mac -p 8080:8080 -e SWEEP_ON_START=false material-actions-creator:ci
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 30); do curl -fsS http://localhost:8080/api/health && break; sleep 1; done
+          curl -fsS http://localhost:8080/ | grep -q "Material Actions Creator"
+          curl -fsS http://localhost:8080/api/auth | tee auth.json
+          grep -q '"ghAvailable":true' auth.json
+          grep -q '"signedIn":false' auth.json
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' \
+            -d '{"dockerfile":"FROM alpine"}' http://localhost:8080/api/builds)
+          test "$code" = "400"
+      - name: Container logs
+        if: always()
+        run: docker logs mac || true

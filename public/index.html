@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Material Actions Creator</title>
+  <meta name="theme-color" content="#0b0c10">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"></div>
+
+  <header class="bar">
+    <a class="brand" href="/">
+      <img src="/icon.svg" alt="" width="34" height="34">
+      <span>Material<b>Actions</b>Creator</span>
+    </a>
+    <div class="bar-right">
+      <button class="account" id="accountBtn" type="button" aria-haspopup="dialog">
+        <span class="avatar" id="avatar"></span>
+        <span class="account-text">
+          <span id="accountName">Not signed in</span>
+          <span class="scope-dots" id="scopeDots"></span>
+        </span>
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="compose card-xl" aria-labelledby="composeTitle">
+      <div class="compose-head">
+        <p class="eyebrow">01 — Instructions</p>
+        <h1 id="composeTitle">Dockerfile in.<br><em>Image out.</em></h1>
+        <p class="lede">Each build spins up a private throwaway repository, runs it on GitHub Actions, hands you the image as a <code>.tar.gz</code>, then deletes the repository.</p>
+      </div>
+
+      <div class="field-row">
+        <label class="field">
+          <span>Image name</span>
+          <input id="imageName" value="my-app:latest" spellcheck="false" autocomplete="off">
+        </label>
+        <div class="field">
+          <span>Platform</span>
+          <div class="segmented" id="platforms" role="radiogroup"></div>
+        </div>
+      </div>
+
+      <div class="templates" id="templates" aria-label="Starter templates"></div>
+
+      <div class="editor-shell">
+        <div class="tabs" id="tabs" role="tablist"></div>
+        <div class="editor">
+          <div class="gutter" id="gutter" aria-hidden="true"></div>
+          <div class="code-wrap">
+            <pre class="highlight" id="highlight" aria-hidden="true"></pre>
+            <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="File contents"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <details class="args">
+        <summary>Build arguments <span id="argCount" class="pill">0</span></summary>
+        <div id="argList"></div>
+        <button class="text-btn" id="addArg" type="button">+ Add argument</button>
+      </details>
+
+      <div class="actions">
+        <p class="hint" id="formHint"></p>
+        <button class="fab" id="buildBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Build image
+        </button>
+      </div>
+    </section>
+
+    <section class="runs" aria-labelledby="runsTitle">
+      <div class="runs-head">
+        <p class="eyebrow">02 — Runs</p>
+        <h2 id="runsTitle">Pipeline</h2>
+        <button class="text-btn" id="sweepBtn" type="button" title="Delete leftover temporary repositories">Sweep leftovers</button>
+      </div>
+      <div id="runList" class="run-list"></div>
+      <div id="emptyRuns" class="empty">
+        <div class="empty-art" aria-hidden="true"><span></span><span></span><span></span></div>
+        <p>No builds yet. Your runs stream in here live.</p>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="authDialog" class="sheet">
+    <form method="dialog" class="sheet-inner">
+      <button class="close" value="close" aria-label="Close">×</button>
+      <p class="eyebrow">GitHub CLI</p>
+      <h2 id="authTitle">Sign in</h2>
+      <div id="authBody"></div>
+    </form>
+  </dialog>
+
+  <dialog id="keyDialog" class="sheet">
+    <form class="sheet-inner" id="keyForm">
+      <p class="eyebrow">Locked</p>
+      <h2>Access key</h2>
+      <p class="muted">This server is protected. Enter the key set in <code>APP_ACCESS_KEY</code>.</p>
+      <label class="field"><span>Key</span><input id="keyInput" type="password" autocomplete="current-password"></label>
+      <div class="actions"><button class="fab small" type="submit">Unlock</button></div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

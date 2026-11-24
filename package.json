@@ -1,0 +1,17 @@
+{
+  "name": "material-actions-creator",
+  "version": "0.1.0",
+  "description": "Web app that builds a Docker image from Dockerfile instructions in a throwaway GitHub Actions repository, hands the image back as a download, then deletes the repository.",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "check": "node --check src/*.js public/app.js",
+    "render-workflow": "node scripts/render-workflow.js"
+  },
+  "license": "MIT"
+}
