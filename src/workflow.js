@@ -4,7 +4,7 @@
 //   - "scripts":    a source repository's build scripts (.bat/.cmd/.ps1/.sh) in, installer files out
 // Two run modes:
 //   - "private":          throwaway private repository, plain files
-//   - "encrypted-public": throwaway public repository; sources and lap saps are
+//   - "encrypted-public": throwaway public repository; sources and outputs are
 //                         encrypted with mac-crypt and the key is an Actions secret
 
 export const PLATFORMS = ['linux/amd64', 'linux/arm64', 'linux/arm/v7', 'linux/386', 'linux/ppc64le', 'linux/s390x'];
@@ -12,7 +12,7 @@ export const RUNNERS = ['windows-latest', 'windows-2025', 'windows-2022', 'windo
 export const MODES = ['private', 'encrypted-public'];
 export const KINDS = ['dockerfile', 'scripts'];
 export const WORKFLOW_FILE = 'mac-build.yml';
-export const ARTIFACT_NAME = 'lap-sap';
+export const ARTIFACT_NAME = 'mac-output';
 export const IMAGE_FILE = 'image.tar.gz';
 export const SEALED_SOURCE = 'src.mac';
 export const SEALED_OUTPUT = 'out.mac';
@@ -110,7 +110,7 @@ function validateScripts(body) {
     if (/\.(bat|cmd)$/i.test(s) && !runner.startsWith('windows')) throw new ValidationError(`${s} needs a Windows runner.`);
   }
   const outputs = (Array.isArray(body.outputs) ? body.outputs : String(body.outputs || '').split(/[\n,]/)).map((g) => g.trim()).filter(Boolean);
-  if (scripts.length && !outputs.length) throw new ValidationError('Say which files are the lap saps (for example dist/**/*.exe).');
+  if (scripts.length && !outputs.length) throw new ValidationError('Say which files are the outputs (for example dist/**/*.exe).');
   for (const g of outputs) {
     if (!GLOB_RE.test(g) || g.split(/[\\/]/).includes('..') || /^[\\/]/.test(g)) throw new ValidationError(`Invalid output pattern: ${g}`);
   }
@@ -137,7 +137,7 @@ const SETUP_NODE = `      - name: Set up Node for mac-crypt
 `;
 
 // globsArg is inserted inside double quotes in bash: either "$VAR" or a literal.
-const sealStep = (base, globsArg) => `      - name: Encrypt lap saps
+const sealStep = (base, globsArg) => `      - name: Encrypt outputs
         shell: bash
         env:
           MAC_KEY: \${{ secrets.MAC_KEY }}
@@ -145,7 +145,7 @@ const sealStep = (base, globsArg) => `      - name: Encrypt lap saps
 `;
 
 function uploadStep(paths) {
-  return `      - name: Upload lap sap
+  return `      - name: Upload output
         uses: actions/upload-artifact@v4
         with:
           name: ${ARTIFACT_NAME}

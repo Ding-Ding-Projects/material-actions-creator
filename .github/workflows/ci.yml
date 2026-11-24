@@ -108,7 +108,7 @@ jobs:
         env:
           SCRIPT: "build/installer.sh"
         run: bash "./$SCRIPT"
-      - name: Seal lap saps with the composite action
+      - name: Seal outputs with the composite action
         uses: ./.github/actions/mac-crypt
         with:
           mode: seal
@@ -116,7 +116,7 @@ jobs:
           path: src
           globs: "dist/**/*.exe, dist/**/*.msi"
           output: out.mac
-      - name: Open lap saps (what the app does after download)
+      - name: Open outputs (what the app does after download)
         uses: ./.github/actions/mac-crypt
         with:
           mode: open

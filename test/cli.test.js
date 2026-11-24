@@ -87,10 +87,10 @@ test('preview prints the generated workflow', async () => {
   assert.match(r.text, /crypt\.mjs seal out\.mac src/);
 });
 
-test('build with all scripts and all workflows, encrypted, saves decrypted lap saps', async () => {
+test('build with all scripts and all workflows, encrypted, saves decrypted outputs', async () => {
   const r = await run('build', 'Ding-Ding-Projects/map-editor', '--all-scripts', '--all-workflows', '--encrypted', '--out', out);
   assert.equal(r.code, 0, r.text);
-  assert.match(r.text, /Download and decrypt lap saps/);
+  assert.match(r.text, /Download and decrypt outputs/);
   assert.match(r.text, /Release/);
   const exe = await readFile(join(out, 'Release', 'installers', 'dist', 'App-from-workflow.exe'), 'utf8');
   assert.equal(exe, `release.yml built from ${SOURCE_TARBALL_BYTES}`);

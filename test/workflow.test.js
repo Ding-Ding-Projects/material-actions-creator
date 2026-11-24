@@ -44,7 +44,7 @@ test('docker workflow passes user values only through env', () => {
   assert.match(yml, /BUILD_ARG_0: "V=\$\(id\)"/);
   assert.match(yml, /setup-qemu-action/);
   assert.ok(!yml.split('run: |').slice(1).join('\n').includes('$(id)'));
-  assert.match(yml, /name: lap-sap/);
+  assert.match(yml, /name: mac-output/);
   assert.doesNotMatch(yml, /MAC_KEY/);
 });
 
@@ -69,7 +69,7 @@ test('script requests validate repo, scripts, runner and outputs', () => {
   assert.throws(() => validateRequest({ ...scripts, scripts: ['a.exe'] }), /Invalid script/);
   assert.throws(() => validateRequest({ ...scripts, runner: 'ubuntu-latest' }), /Windows runner/);
   assert.throws(() => validateRequest({ ...scripts, runner: 'my-laptop' }), /runner/);
-  assert.throws(() => validateRequest({ ...scripts, outputs: '' }), /lap saps/);
+  assert.throws(() => validateRequest({ ...scripts, outputs: '' }), /outputs/);
   assert.throws(() => validateRequest({ ...scripts, outputs: '../secrets/*' }), /Invalid output/);
   assert.throws(() => validateRequest({ ...scripts, outputs: 'dist/$(whoami)' }), /Invalid output/);
   assert.throws(() => validateRequest({ ...scripts, ref: 'main..evil' }), /branch/);

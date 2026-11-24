@@ -113,7 +113,7 @@ test('scans a repository for build scripts and previews workflows', async () => 
   assert.equal((await call('/api/preview', { method: 'POST', body: { kind: 'scripts' } })).status, 400);
 });
 
-test('encrypted script build through the API lists decrypted lap saps', async () => {
+test('encrypted script build through the API lists decrypted outputs', async () => {
   ghAuth.loggedIn = true;
   const res = await call('/api/builds', { method: 'POST', body: { kind: 'scripts', repo: 'Ding-Ding-Projects/map-editor', ref: 'main', scripts: ['build/installer.bat'], outputs: 'dist/**/*.exe', mode: 'encrypted-public' } });
   assert.equal(res.status, 202);

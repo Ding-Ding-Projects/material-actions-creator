@@ -2,7 +2,7 @@ name: mac-crypt
 description: >-
   Encryption skill for Material Actions Creator. "open" decrypts an encrypted
   source bundle before a build; "seal" packs and encrypts build outputs so they
-  can be uploaded as a lap sap that only the app can read. Works on Linux,
+  can be uploaded as an artifact that only the app can read. Works on Linux,
   macOS and Windows runners.
 inputs:
   mode:

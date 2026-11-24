@@ -3,7 +3,7 @@
 // private:          temp private repo -> commit -> dispatch -> wait -> download -> delete repo
 // encrypted-public: mint temp key -> encrypt sources -> temp public repo -> commit ->
 //                   store key as Actions secret -> dispatch -> wait ->
-//                   download + decrypt lap saps -> delete repo + revoke key
+//                   download + decrypt outputs -> delete repo + revoke key
 //
 // Every stage change is written to <dataDir>/journal.json. If the app stops,
 // the builds keep running on GitHub; on the next start each unfinished build is
@@ -21,7 +21,7 @@ import {
   SEALED_SOURCE, SEALED_OUTPUT, SOURCE_TARBALL, CRYPT_PATH,
 } from './workflow.js';
 import { listEntries, extractEntry } from './zip.js';
-import { transformWorkflow, workflowName, LAP_PREFIX } from './transform.js';
+import { transformWorkflow, workflowName, OUTPUT_PREFIX } from './transform.js';
 import { keygen, seal, open, safeRelPath } from './mac-crypt.mjs';
 import { sealedBox } from './sealedbox.js';
 
@@ -40,8 +40,8 @@ const STAGE_LABELS = {
   secret: 'Store run key as Actions secret',
   dispatch: 'Start workflow run',
   build: 'Build on GitHub Actions',
-  download: 'Download lap saps',
-  downloadEnc: 'Download and decrypt lap saps',
+  download: 'Download outputs',
+  downloadEnc: 'Download and decrypt outputs',
   cleanup: 'Delete temporary repository',
   cleanupEnc: 'Destroy repository and key',
 };
@@ -399,7 +399,7 @@ export class JobManager extends EventEmitter {
         this.stage(job, 'cleanup', 'done', detail);
       } catch (err) {
         this.stage(job, 'cleanup', 'failed', err.message);
-        if (!failed) this.update(job, { error: `Lap saps ready, but the temporary repository could not be deleted: ${err.message}` });
+        if (!failed) this.update(job, { error: `Outputs ready, but the temporary repository could not be deleted: ${err.message}` });
       }
     } else {
       this.stage(job, 'cleanup', 'skipped', mayHaveRepo ? 'Kept for debugging' : 'Nothing to delete');
@@ -500,7 +500,7 @@ export class JobManager extends EventEmitter {
   }
 
   // Downloads every artifact of the given runs and turns them into files.
-  // Encrypted artifacts (lap-sap*) are opened with the run key.
+  // Encrypted artifacts (mac-output*) are opened with the run key.
   async collect(job, gh, owner, targets) {
     const p = this.priv.get(job.id);
     const enc = job.mode === 'encrypted-public';
@@ -511,16 +511,16 @@ export class JobManager extends EventEmitter {
     const found = [];
     for (const t of targets) {
       for (const a of await gh.runArtifacts(owner, job.repo, t.runId)) {
-        if (enc && !(a.name === ARTIFACT_NAME || a.name.startsWith(LAP_PREFIX))) continue;
+        if (enc && !(a.name === ARTIFACT_NAME || a.name.startsWith(OUTPUT_PREFIX))) continue;
         found.push({ t, a });
       }
     }
-    if (!found.length) throw new Error('The run did not upload a lap sap.');
+    if (!found.length) throw new Error('The run did not upload any build output.');
     // A single artifact lands flat; several get their own folders.
     const flat = found.length === 1;
     const out = [];
     for (const [i, { t, a }] of found.entries()) {
-      const label = a.name === ARTIFACT_NAME || a.name === 'docker-image' ? '' : a.name.startsWith(LAP_PREFIX) ? a.name.slice(LAP_PREFIX.length) : a.name;
+      const label = a.name === ARTIFACT_NAME || a.name === 'docker-image' ? '' : a.name.startsWith(OUTPUT_PREFIX) ? a.name.slice(OUTPUT_PREFIX.length) : a.name;
       const prefix = flat ? '' : [targets.length > 1 ? slug(t.name) : '', slug(label || 'build')].filter(Boolean).join('/');
       const dest = prefix ? join(filesDir, prefix) : filesDir;
       await mkdir(dest, { recursive: true });
@@ -553,7 +553,7 @@ export class JobManager extends EventEmitter {
         await rm(zipPath, { force: true });
       }
     }
-    if (!out.length) throw new Error('The lap saps were empty.');
+    if (!out.length) throw new Error('The outputs were empty.');
     return out;
   }
 

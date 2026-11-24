@@ -36,7 +36,7 @@ Build a repository
       --workflow <path>            Run one of the repository's own workflows (repeatable)
       --all-workflows              Run every workflow that can be started manually
       --runner <label>             Default: windows-latest
-      --outputs <globs>            Lap sap globs for scripts, e.g. "dist/**/*.exe"
+      --outputs <globs>            Output globs for scripts, e.g. "dist/**/*.exe"
       --encrypted                  Encrypted public builder (default: private temp repo)
       --name <title>
   mac preview <owner/repo> [same options]    Print the generated workflow, do nothing
@@ -48,7 +48,7 @@ Build a Dockerfile
 Runs
   mac runs                         List builds
   mac watch <id>                   Follow a build (resumes it if the engine had stopped)
-  mac download <id> [--out dir]    Save every lap sap (decrypted)
+  mac download <id> [--out dir]    Save every output (decrypted)
   mac rm <id>                      Dismiss a finished build and delete its files
   mac sweep                        Delete leftover temporary repositories
 
@@ -60,7 +60,7 @@ Other
 Common options
   --server <url>   Use a running server (or MAC_SERVER). --key <key> (or MAC_ACCESS_KEY)
   --owner <name>   Where temporary repositories go (or GITHUB_OWNER)
-  --out <dir>      Where build/docker/download save lap saps (default ./lap-saps/<id>)
+  --out <dir>      Where build/docker/download save outputs (default ./outputs/<id>)
   --detach         Start a build and return its id without waiting
   --json           Machine-readable output
 `;
@@ -173,7 +173,7 @@ async function follow(be, id, { json }) {
 }
 
 async function saveOutputs(be, job, outDir, { json }) {
-  const dir = resolve(outDir || join('lap-saps', job.id));
+  const dir = resolve(outDir || join('outputs', job.id));
   const saved = [];
   for (const o of job.outputs || []) {
     const dest = join(dir, ...o.name.split('/'));
@@ -295,7 +295,7 @@ const COMMANDS = {
       console.log(`  ${w.dispatchable ? lime('▶') : dim('·')} ${w.path}  ${dim(w.name)}${w.dispatchable ? '' : dim('  (callable only)')}`);
       for (const x of w.warnings) console.log(dim(`      ${x}`));
     }
-    console.log(`\n${dim('Suggested lap saps:')} ${r.outputsGuess}`);
+    console.log(`\n${dim('Suggested outputs:')} ${r.outputsGuess}`);
     return 0;
   },
 
@@ -333,7 +333,7 @@ const COMMANDS = {
     if (!list.length) { console.log(dim('No builds yet.')); return 0; }
     for (const j of list) {
       const done = j.stages.filter((s) => s.state === 'done').length;
-      console.log(`${dim(j.id)}  ${(STATUS[j.status] || ((s) => s))(j.status.padEnd(7))}  ${j.title}  ${dim(`${done}/${j.stages.length}${j.outputs?.length ? ` · ${j.outputs.length} lap sap${j.outputs.length === 1 ? '' : 's'}` : ''}${j.recovered ? ' · resumed' : ''}`)}`);
+      console.log(`${dim(j.id)}  ${(STATUS[j.status] || ((s) => s))(j.status.padEnd(7))}  ${j.title}  ${dim(`${done}/${j.stages.length}${j.outputs?.length ? ` · ${j.outputs.length} output${j.outputs.length === 1 ? '' : 's'}` : ''}${j.recovered ? ' · resumed' : ''}`)}`);
     }
     return 0;
   },

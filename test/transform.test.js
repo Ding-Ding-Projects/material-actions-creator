@@ -35,7 +35,7 @@ test('encrypted mode decrypts after checkout and seals every upload', () => {
   const seal = steps.find((s) => /^mac: seal/.test(s.name));
   assert.equal(seal.env.MAC_GLOBS, 'dist/*.exe');
   const up = steps.find((s) => /upload-artifact/.test(s.uses || ''));
-  assert.equal(up.with.name, 'lap-sap-installers');
+  assert.equal(up.with.name, 'mac-output-installers');
   assert.equal(up.with.path, '${{ runner.temp }}/mac-out-0.mac');
   assert.ok(!yaml.includes('path: dist/*.exe'), 'plain artifact path must not be uploaded');
 });
@@ -61,11 +61,11 @@ jobs:
   const wf = YAML.parse(transformWorkflow(src, { mode: 'encrypted-public' }).yaml);
   const b = wf.jobs.b.steps;
   const dl = b.find((s) => /download-artifact/.test(s.uses || '') && s.with.name);
-  assert.equal(dl.with.name, 'lap-sap-bin');
+  assert.equal(dl.with.name, 'mac-output-bin');
   const open = b.find((s) => s.name === 'mac: open bin');
   assert.equal(open.env.MAC_TARGET, 'out');
   const all = b.find((s) => /download-artifact/.test(s.uses || '') && s.with.pattern);
-  assert.equal(all.with.pattern, 'lap-sap-*');
+  assert.equal(all.with.pattern, 'mac-output-*');
 });
 
 test('reusable-only workflows are kept but not started on their own', () => {

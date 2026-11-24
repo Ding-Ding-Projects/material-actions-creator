@@ -131,13 +131,13 @@
       <div class="file"><span class="com"># Ding-Ding-Projects/map-editor @ main → windows-latest</span>
 <span class="kw">01</span> build\installer.bat
 <span class="kw">02</span> build\sign.bat
-<span class="com"># lap saps:</span> <span class="str">dist/**/*.exe, dist/**/*.msi</span></div>
+<span class="com"># outputs:</span> <span class="str">dist/**/*.exe, dist/**/*.msi</span></div>
       <ol class="steps">
         <li style="--i:0"><span>Mint temporary key</span><span>1h</span></li>
         <li style="--i:1"><span>Encrypt sources → public repo</span><span>src.mac</span></li>
         <li style="--i:2"><span>Store key as Actions secret</span><span>MAC_KEY</span></li>
         <li style="--i:3"><span>Run build scripts on Windows</span><span>cmd</span></li>
-        <li style="--i:4"><span>Download and decrypt lap saps</span><span>2 files</span></li>
+        <li style="--i:4"><span>Download and decrypt outputs</span><span>2 files</span></li>
         <li style="--i:5" class="del"><span>Destroy repository and key</span><span>gone</span></li>
       </ol>
       <div class="out"><span>↓ MapEditor-Setup-1.4.0.exe</span><span>decrypted</span></div>
@@ -235,7 +235,7 @@ node mac-crypt.mjs open out.mac back</div>
 mac scan Ding-Ding-Projects/map-editor
 mac build Ding-Ding-Projects/map-editor \
   --all-scripts --all-workflows --encrypted \
-  --out ./lap-saps</div>
+  --out ./outputs</div>
         </div>
         <div class="tile t-5">
           <h3>Assisted sign-in</h3>
@@ -273,7 +273,7 @@ mac watch "$id" --out dist/ &amp;&amp; mac rm "$id"</div>
       <h2>Builds don't stop<br><span class="grad">when the app does.</span></h2>
       <div class="checks">
         <div class="check"><span class="tag">Tab closed</span><h3>Nothing happens</h3><ul><li>The server keeps running builds</li><li>Reopen the page and it catches up live</li></ul></div>
-        <div class="check"><span class="tag">Server stopped</span><h3>Journal resumes</h3><ul><li>Every stage is written to <code>/data/journal.json</code></li><li>On start, each unfinished build is reattached to its run, its lap saps are downloaded and decrypted, and the repository is deleted</li><li>GitHub keeps artifacts for a day, so there's a day to come back</li></ul></div>
+        <div class="check"><span class="tag">Server stopped</span><h3>Journal resumes</h3><ul><li>Every stage is written to <code>/data/journal.json</code></li><li>On start, each unfinished build is reattached to its run, its outputs are downloaded and decrypted, and the repository is deleted</li><li>GitHub keeps artifacts for a day, so there's a day to come back</li></ul></div>
         <div class="check"><span class="tag">Never came back</span><h3>Sweeper</h3><ul><li>At startup, <code>mac-tmp-*</code> and <code>mac-pub-*</code> repositories older than three hours that aren't in the journal are deleted</li><li>Or click <b>Sweep leftovers</b></li></ul></div>
       </div>
     </div>

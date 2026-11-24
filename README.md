@@ -28,7 +28,7 @@ Load the result with `docker load -i <file>.tar.gz`.
 npm install -g .            # or use `mac` inside the Docker image
 mac login                   # assisted GitHub CLI device sign-in with repo, workflow, delete_repo
 mac scan owner/repo         # build scripts + workflows, with what will change
-mac build owner/repo --all-scripts --all-workflows --encrypted --out ./lap-saps
+mac build owner/repo --all-scripts --all-workflows --encrypted --out ./outputs
 mac docker -f Dockerfile --file app.py --image my-app:1 --platform linux/arm64
 mac runs | mac watch <id> | mac download <id> | mac rm <id> | mac sweep
 mac preview owner/repo --script build/installer.bat --outputs "dist/*.exe"

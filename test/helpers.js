@@ -133,7 +133,7 @@ export function fakeGitHub({
         outputs = [{ name: 'image.tar.gz', data: Buffer.from(`IMAGE:${dockerfile}`) }];
       }
       state.seen.outputs = outputs;
-      const artName = isSource ? 'installers' : 'lap-sap';
+      const artName = isSource ? 'installers' : 'mac-output';
       if (legacyArtifact) return [{ name: 'docker-image', zip: makeZip([{ name: 'image.tar.gz', data: legacyArtifact }]) }];
       if (!enc) return [{ name: artName, zip: makeZip(outputs) }];
       const outDir = join(dir, 'out');
@@ -143,7 +143,7 @@ export function fakeGitHub({
       }
       await seal(join(dir, 'out.mac'), outDir, ['**/*'], key);
       const zip = makeZip([{ name: isSource ? 'mac-out-0.mac' : 'out.mac', data: await readFile(join(dir, 'out.mac')) }], { method: 0 });
-      return [{ name: isSource ? `lap-sap-${artName}` : 'lap-sap', zip }];
+      return [{ name: isSource ? `mac-output-${artName}` : 'mac-output', zip }];
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

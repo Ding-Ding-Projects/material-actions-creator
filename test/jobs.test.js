@@ -38,7 +38,7 @@ test('stage lists differ per mode', () => {
   const enc = stagesFor('encrypted-public');
   assert.deepEqual(enc.map((s) => s.id), ['key', 'encrypt', 'repo', 'commit', 'secret', 'dispatch', 'build', 'download', 'cleanup']);
   assert.equal(enc.find((s) => s.id === 'repo').label, 'Create public repository');
-  assert.equal(enc.find((s) => s.id === 'download').label, 'Download and decrypt lap saps');
+  assert.equal(enc.find((s) => s.id === 'download').label, 'Download and decrypt outputs');
 });
 
 test('private Dockerfile build: commit, download and delete', async () => {
@@ -89,7 +89,7 @@ test('private script build: source tarball in, installer files out', async () =>
   assert.equal(await readFile(jobs.filePath(job.id, job.outputs.findIndex((o) => o.name === 'Setup-1.0.exe')), 'utf8'), `EXE built from ${SOURCE_TARBALL_BYTES}`);
 });
 
-test('encrypted script build: lap saps listed and auto-decrypted', async () => {
+test('encrypted script build: outputs listed and auto-decrypted', async () => {
   const { gh, jobs } = await setup();
   let snapshot;
   const created = jobs.create(scriptsEnc);
@@ -124,7 +124,7 @@ test('failed runs report the failing step and still delete the repo', async () =
   assert.equal(gh.state.repos.size, 0);
 });
 
-test('cleanup failure is surfaced but the lap saps stay downloadable', async () => {
+test('cleanup failure is surfaced but the outputs stay downloadable', async () => {
   const { jobs } = await setup({ failDelete: true });
   const job = await finish(jobs, jobs.create(docker).id);
   assert.equal(job.status, 'ready');
@@ -170,7 +170,7 @@ test('app stops mid-build, restarts, reattaches and finishes the encrypted build
   await first.jobs.jobs.get(created.id).promise;
   const saved = JSON.parse(await readFile(join(dataDir, 'journal.json'), 'utf8'));
   assert.equal(saved.jobs[0].job.status, 'running');
-  assert.ok(saved.jobs[0].priv.key, 'key must survive a restart so lap saps can be decrypted');
+  assert.ok(saved.jobs[0].priv.key, 'key must survive a restart so outputs can be decrypted');
   assert.equal(first.gh.state.repos.size, 1, 'repo keeps building while the app is down');
 
   // Second life: same GitHub, fresh manager reading the same journal.
@@ -245,7 +245,7 @@ test('encrypted run of the source repository\'s own workflows plus scripts', asy
   assert.deepEqual(job.runs.map((r) => r.name), ['Build scripts', 'Release', 'Lint']);
   assert.ok(job.runs.every((r) => r.conclusion === 'success'));
   assert.ok(job.warnings.some((w) => /^Release: .*removed publishing step/.test(w)));
-  // Lap saps from every run, decrypted into one folder per run/artifact.
+  // Outputs from every run, decrypted into one folder per run/artifact.
   const names = job.outputs.map((o) => o.name).sort();
   assert.ok(names.includes('Release/installers/dist/App-from-workflow.exe'), names.join());
   assert.ok(names.includes('Build-scripts/build/Setup-1.0.exe'), names.join());

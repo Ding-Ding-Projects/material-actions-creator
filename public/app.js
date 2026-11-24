@@ -20,7 +20,7 @@ const TEMPLATE_FILES = {
 };
 const MODE_COPY = {
   private: { title: 'Private temp repo', body: 'Throwaway private repository. Code stays private; uses your account’s Actions minutes.' },
-  'encrypted-public': { title: 'Encrypted public builder', body: 'Throwaway public repository. Sources and lap saps are encrypted with a per-run key that only lives in an Actions secret.' },
+  'encrypted-public': { title: 'Encrypted public builder', body: 'Throwaway public repository. Sources and outputs are encrypted with a per-run key that only lives in an Actions secret.' },
 };
 
 const savedWf = store.get('mac-wf', {});
@@ -449,7 +449,7 @@ function buildCard(job) {
     ${job.error ? `<p class="run-error">${esc(job.error)}</p>` : ''}
     ${job.outputs?.length && job.status === 'ready' ? `
       <div class="laps">
-        <div class="laps-head"><span>Lap saps</span>${enc ? '<span class="ok">✓ decrypted</span>' : ''}</div>
+        <div class="laps-head"><span>Outputs</span>${enc ? '<span class="ok">✓ decrypted</span>' : ''}</div>
         ${job.outputs.map((o) => `
           <div class="lap">
             <span class="lap-name" title="${esc(o.name)}">${esc(o.name)}</span>

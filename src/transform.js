@@ -16,7 +16,7 @@
 import YAML from 'yaml';
 import { SEALED_SOURCE, SOURCE_TARBALL, CRYPT_PATH } from './workflow.js';
 
-export const LAP_PREFIX = 'lap-sap-';
+export const OUTPUT_PREFIX = 'mac-output-';
 const PUBLISH_RE = /^(softprops\/action-gh-release|actions\/create-release|actions\/upload-release-asset|ncipollo\/release-action|marvinpinto\/action-automatic-releases|svenstaro\/upload-release-action|peaceiris\/actions-gh-pages|JamesIves\/github-pages-deploy-action|actions\/deploy-pages|actions\/upload-pages-artifact|pypa\/gh-action-pypi-publish|JS-DevTools\/npm-publish|stefanzweifel\/git-auto-commit-action|EndBug\/add-and-commit|peter-evans\/create-pull-request|actions\/attest-build-provenance)@/i;
 const READ_ONLY = { contents: 'read', actions: 'read' };
 const CRYPT_TMP = '"$RUNNER_TEMP/mac-crypt.mjs"';
@@ -67,7 +67,7 @@ function sealSteps(step, k) {
     name: `mac: upload sealed ${step.name || name}`,
     with: {
       ...Object.fromEntries(Object.entries(step.with || {}).filter(([key]) => ['retention-days', 'overwrite', 'if-no-files-found'].includes(key))),
-      name: `${LAP_PREFIX}${name}`,
+      name: `${OUTPUT_PREFIX}${name}`,
       path: out,
       'compression-level': 0,
     },
@@ -84,7 +84,7 @@ function openSteps(step, k) {
     name: `mac: download sealed ${step.name || named || 'artifacts'}`,
     with: {
       ...Object.fromEntries(Object.entries(step.with || {}).filter(([key]) => !['name', 'path', 'pattern', 'merge-multiple'].includes(key))),
-      ...(named ? { name: `${LAP_PREFIX}${named}` } : { pattern: `${LAP_PREFIX}*` }),
+      ...(named ? { name: `${OUTPUT_PREFIX}${named}` } : { pattern: `${OUTPUT_PREFIX}*` }),
       path: dl,
     },
   };
@@ -94,7 +94,7 @@ function openSteps(step, k) {
     env: { MAC_KEY: '${{ secrets.MAC_KEY }}', MAC_TARGET: target },
     run: named || step.with?.['merge-multiple']
       ? `for f in "$RUNNER_TEMP/mac-dl-${k}"/*.mac "$RUNNER_TEMP/mac-dl-${k}"/*/*.mac; do [ -e "$f" ] || continue; node ${CRYPT_TMP} open "$f" "$MAC_TARGET"; done\n`
-      : `for d in "$RUNNER_TEMP/mac-dl-${k}"/${LAP_PREFIX}*; do n=$(basename "$d"); n=\${n#${LAP_PREFIX}}; for f in "$d"/*.mac; do node ${CRYPT_TMP} open "$f" "$MAC_TARGET/$n"; done; done\n`,
+      : `for d in "$RUNNER_TEMP/mac-dl-${k}"/${OUTPUT_PREFIX}*; do n=$(basename "$d"); n=\${n#${OUTPUT_PREFIX}}; for f in "$d"/*.mac; do node ${CRYPT_TMP} open "$f" "$MAC_TARGET/$n"; done; done\n`,
   };
   if (step.if) open.if = step.if;
   return [download, open];
