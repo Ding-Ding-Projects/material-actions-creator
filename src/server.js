@@ -9,6 +9,7 @@ import { GhAuth, missingScopes, REQUIRED_SCOPES } from './ghauth.js';
 import { JobManager } from './jobs.js';
 import { validateRequest, renderWorkflow, PLATFORMS, RUNNERS, MODES, ValidationError } from './workflow.js';
 import { GitHubApp } from './githubapp.js';
+import { transformWorkflow, workflowName } from './transform.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const PUBLIC_DIR = join(ROOT, 'public');
@@ -121,7 +122,19 @@ export function createApp(opts = {}) {
       const tree = await gh.getTree(o, r, ref);
       const scripts = (tree.tree || []).filter((t) => t.type === 'blob' && /\.(bat|cmd|ps1|sh)$/i.test(t.path)).map((t) => t.path).slice(0, 200);
       const guess = (tree.tree || []).some((t) => /^(dist|out|build|release)\//i.test(t.path)) ? 'dist/**/*.exe, dist/**/*.msi' : '**/*.exe, **/*.msi';
-      return json(res, 200, { repo, ref, defaultBranch: info.default_branch, private: info.private, scripts, outputsGuess: guess, truncated: Boolean(tree.truncated) });
+      const wfPaths = (tree.tree || []).filter((t) => t.type === 'blob' && /^\.github\/workflows\/[^/]+\.ya?ml$/.test(t.path)).map((t) => t.path).slice(0, 30);
+      const workflows = [];
+      for (const path of wfPaths) {
+        try {
+          const raw = await gh.getContents(o, r, path, ref);
+          const text = Buffer.from(raw.content || '', 'base64').toString('utf8');
+          const t = transformWorkflow(text, { mode: url.searchParams.get('mode') || 'encrypted-public', file: path });
+          workflows.push({ path, name: workflowName(text, path), dispatchable: t.dispatchable, warnings: t.warnings });
+        } catch (err) {
+          workflows.push({ path, name: path.split('/').pop(), dispatchable: false, warnings: [err.message] });
+        }
+      }
+      return json(res, 200, { repo, ref, defaultBranch: info.default_branch, private: info.private, scripts, workflows, outputsGuess: guess, truncated: Boolean(tree.truncated) });
     }
     if (pathname === '/api/recovery' && req.method === 'GET') return json(res, 200, jobs.recoveryView());
     if (pathname === '/api/recovery/dismiss' && req.method === 'POST') { jobs.dismissRecovery(); return json(res, 200, { ok: true }); }

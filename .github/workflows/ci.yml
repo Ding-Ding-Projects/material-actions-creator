@@ -46,7 +46,7 @@ jobs:
       - name: Lint this repository's workflows
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
       - name: Lint generated workflows
-        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color rendered/amd64.yml rendered/arm64-args.yml rendered/docker-encrypted.yml rendered/scripts-private.yml rendered/scripts-encrypted.yml
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color rendered/amd64.yml rendered/arm64-args.yml rendered/docker-encrypted.yml rendered/scripts-private.yml rendered/scripts-encrypted.yml rendered/source-private.yml rendered/source-encrypted-public.yml
 
   crypt-compat:
     name: mac-crypt skill on ${{ matrix.os }}
@@ -162,6 +162,11 @@ jobs:
           code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' \
             -d '{"dockerfile":"FROM alpine"}' http://localhost:8080/api/builds)
           test "$code" = "400"
+      - name: CLI is bundled
+        run: |
+          docker run --rm --entrypoint mac material-actions-creator:ci --version
+          docker run --rm --entrypoint mac material-actions-creator:ci --help | grep -q "mac login"
+          docker run --rm -e GITHUB_TOKEN= --entrypoint mac material-actions-creator:ci whoami || test $? -eq 1
       - name: Container logs
         if: always()
         run: docker logs mac || true

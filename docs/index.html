@@ -108,6 +108,7 @@
         <a href="#how">How it works</a>
         <a href="#encrypted">Encrypted builder</a>
         <a href="#skill">mac-crypt skill</a>
+        <a href="#cli">CLI</a>
         <a href="#start">Quick start</a>
         <a href="#config">Config</a>
         <a href="#tests">Tests</a>
@@ -218,6 +219,50 @@ node mac-crypt.mjs seal out.mac src "dist/**/*.exe"
 node mac-crypt.mjs open out.mac back</div>
           <p style="margin-top:16px">Chunks are bound to their position and to an end marker, so a reordered, truncated or extended file fails to open. Bundles refuse paths that would escape the destination.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="cli">
+    <div class="wrap">
+      <p class="eyebrow">Command line</p>
+      <h2>Everything, from<br><span class="grad">a terminal.</span></h2>
+      <p class="sub">The <code>mac</code> command does what the web app does — sign-in, scans, builds, Dockerfiles, runs, downloads — against a private in-process engine or a running server.</p>
+      <div class="bento">
+        <div class="tile t-7">
+          <h3>Build a repository</h3>
+          <div class="code">mac login
+mac scan Ding-Ding-Projects/map-editor
+mac build Ding-Ding-Projects/map-editor \
+  --all-scripts --all-workflows --encrypted \
+  --out ./lap-saps</div>
+        </div>
+        <div class="tile t-5">
+          <h3>Assisted sign-in</h3>
+          <p><code>mac login</code> runs the GitHub CLI device flow with <code>repo</code>, <code>workflow</code> and <code>delete_repo</code>, prints the one-time code and waits. <code>mac login --refresh</code> adds missing scopes.</p>
+        </div>
+        <div class="tile t-4">
+          <h3>Survives Ctrl+C</h3>
+          <p>The build keeps running on GitHub; <code>mac watch &lt;id&gt;</code> picks it up from the journal.</p>
+        </div>
+        <div class="tile t-8">
+          <h3>Scriptable</h3>
+          <div class="code">id=$(mac build owner/repo --all-workflows --detach --json | jq -r .id)
+mac watch "$id" --out dist/ &amp;&amp; mac rm "$id"</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="workflows">
+    <div class="wrap">
+      <p class="eyebrow">Your own workflows</p>
+      <h2>Run the workflows<br><span class="grad">you already have.</span></h2>
+      <p class="sub">Tick any workflow in the repository — or all of them. Each one runs inside the temporary repository, rewritten so it can't publish anything and, in encrypted mode, so nothing readable leaves the runner.</p>
+      <div class="checks">
+        <div class="check"><span class="tag">Triggers</span><h3>Manual start only</h3><ul><li>Push, tag, schedule and PR triggers become <code>workflow_dispatch</code></li><li>Reusable workflows keep <code>workflow_call</code> and are included so calls resolve</li></ul></div>
+        <div class="check"><span class="tag">Safety</span><h3>Read-only token</h3><ul><li>Permissions forced to read-only on the workflow and every job</li><li>Releases, Pages, package publishing and auto-commits removed; image pushes disabled</li></ul></div>
+        <div class="check"><span class="tag">Encryption</span><h3>Sealed artifacts</h3><ul><li>Sources decrypted right after checkout</li><li>Every uploaded artifact sealed, every downloaded one opened</li><li>All of them come back to you decrypted</li></ul></div>
       </div>
     </div>
   </section>

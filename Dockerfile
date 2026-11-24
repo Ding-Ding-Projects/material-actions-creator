@@ -15,7 +15,8 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY src ./src
 COPY public ./public
 
-RUN mkdir -p /data/builds /data/gh && chown -R node:node /data
+RUN mkdir -p /data/builds /data/gh && chown -R node:node /data \
+    && chmod +x /app/src/cli.js && ln -s /app/src/cli.js /usr/local/bin/mac
 USER node
 VOLUME ["/data"]
 EXPOSE 8080

@@ -5,6 +5,8 @@
 - **Workflows tab** — pick a repository, scan for build scripts, tick and order them, choose a runner (Windows by default) and the output globs. A live preview shows the exact workflow; you can also download it.
 - **Dockerfile tab** — Dockerfile instructions in, Docker image (`.tar.gz`) out.
 - **Two run modes** — *Private temp repo*, or *Encrypted public builder*: a throwaway public repository that only ever holds ciphertext (see below).
+- **The repository's own workflows** — scan lists `.github/workflows`; tick any (or **Run all workflows**) and they run inside the temporary repository, rewritten to a manual start with read-only permissions, publishing steps removed and, in encrypted mode, every artifact sealed before upload.
+- **CLI** — `mac` does everything the web app does, including assisted GitHub CLI sign-in (see below).
 - **Runs tab** — live stages, every output listed for download (auto-decrypted for encrypted runs), and builds that resume after a restart.
 
 📖 Docs site: https://ding-ding-projects.github.io/material-actions-creator/
@@ -19,6 +21,34 @@
 6. Deletes the repository — on success **and** on failure. A startup sweeper removes any `mac-tmp-*` repositories older than three hours.
 
 Load the result with `docker load -i <file>.tar.gz`.
+
+## CLI
+
+```sh
+npm install -g .            # or use `mac` inside the Docker image
+mac login                   # assisted GitHub CLI device sign-in with repo, workflow, delete_repo
+mac scan owner/repo         # build scripts + workflows, with what will change
+mac build owner/repo --all-scripts --all-workflows --encrypted --out ./lap-saps
+mac docker -f Dockerfile --file app.py --image my-app:1 --platform linux/arm64
+mac runs | mac watch <id> | mac download <id> | mac rm <id> | mac sweep
+mac preview owner/repo --script build/installer.bat --outputs "dist/*.exe"
+mac serve --port 8080       # the web app
+mac crypt seal|open|keygen  # the mac-crypt skill
+```
+
+By default the CLI runs a private engine in-process and keeps builds and the run journal in `~/.material-actions-creator` (override with `MAC_HOME`). Point it at a running server with `--server URL` (or `MAC_SERVER`) and `--key` (or `MAC_ACCESS_KEY`). Press Ctrl+C during a build and it keeps running on GitHub; `mac watch <id>` picks it up again. `--json` gives machine-readable output; `--detach` starts a build and returns its id.
+
+## Running the repository's own workflows
+
+Every workflow file goes into the temporary repository (so reusable workflows still resolve) and only the chosen ones start. Each is rewritten:
+
+- triggers become `workflow_dispatch` (reusable workflows keep `workflow_call`), so committing never starts anything;
+- workflow and job permissions become `contents: read, actions: read`; deployment environments are removed;
+- after each checkout of the repository itself, the real sources are unpacked (decrypted first in encrypted mode);
+- known publishing steps (GitHub releases, Pages, package publishing, auto-commits) are removed and `docker/build-push-action` stops pushing;
+- encrypted mode seals every `upload-artifact` with mac-crypt and opens every `download-artifact`, so jobs still hand artifacts to each other but nothing readable is uploaded.
+
+The scan shows every change per workflow (missing secrets, event checks, required inputs) before you start. The build is pinned to one commit, so pushes made while it runs don't mix in.
 
 ## Encrypted public builder
 

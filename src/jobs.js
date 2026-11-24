@@ -21,6 +21,7 @@ import {
   SEALED_SOURCE, SEALED_OUTPUT, SOURCE_TARBALL, CRYPT_PATH,
 } from './workflow.js';
 import { listEntries, extractEntry } from './zip.js';
+import { transformWorkflow, workflowName, LAP_PREFIX } from './transform.js';
 import { keygen, seal, open, safeRelPath } from './mac-crypt.mjs';
 import { sealedBox } from './sealedbox.js';
 
@@ -161,7 +162,7 @@ export class JobManager extends EventEmitter {
   }
 
   // Loads the journal and resumes unfinished builds. Returns the recovery summary.
-  async load() {
+  async load({ resume = true } = {}) {
     let data;
     try { data = JSON.parse(await readFile(this.journalPath, 'utf8')); } catch { return null; }
     const resumed = [];
@@ -174,6 +175,7 @@ export class JobManager extends EventEmitter {
       }
       if (job.status === 'running') resumed.push(job);
     }
+    if (resumed.length && !resume) return null;
     if (resumed.length) {
       this.recovery = { at: Date.now(), offlineMs: Math.max(0, Date.now() - (data.savedAt || Date.now())), jobs: resumed.map((j) => j.id) };
       for (const job of resumed) {
@@ -189,6 +191,16 @@ export class JobManager extends EventEmitter {
   recoveryView() {
     if (!this.recovery) return null;
     return { ...this.recovery, builds: this.recovery.jobs.map((id) => this.get(id)).filter(Boolean) };
+  }
+
+  // Resumes one journaled build that is still running (used by the CLI).
+  resumeOne(id) {
+    const job = this.jobs.get(id);
+    if (!job || job.status !== 'running' || job.promise) return job?.promise || null;
+    job.recovered = true;
+    const promise = this.drive(job, { resume: true }).catch(() => {});
+    Object.defineProperty(job, 'promise', { value: promise, enumerable: false, configurable: true });
+    return promise;
   }
 
   dismissRecovery() {
@@ -217,6 +229,8 @@ export class JobManager extends EventEmitter {
       runUrl: null,
       error: null,
       outputs: [],
+      runs: [],
+      warnings: [],
       expiresAt: null,
       keySource: null,
       keyExpiresAt: null,
@@ -262,6 +276,7 @@ export class JobManager extends EventEmitter {
         if (!phase || ['key', 'encrypt'].includes(phase)) { mayHaveRepo = false; throw new Interrupted('The app stopped before the repository was created. Run it again.'); }
         if (['repo', 'commit', 'secret'].includes(phase)) throw new Interrupted('The app stopped while the repository was being prepared. It was cleaned up; run it again.');
         from = phase === 'cleanup' ? 'cleanup' : phase === 'dispatch' ? 'dispatch' : 'build';
+        if (!p.targets && p.runId) p.targets = [{ file: WORKFLOW_FILE, name: 'Build scripts', runId: p.runId }];
       }
 
       if (enc) this.stage(job, 'key', 'active');
@@ -300,47 +315,63 @@ export class JobManager extends EventEmitter {
         }
       }
 
-      let run = null;
+      // One run per workflow to start: the generated script workflow and/or
+      // the source repository's own (rewritten) workflows.
+      if (!p.targets) p.targets = [{ file: WORKFLOW_FILE, name: 'Build scripts' }];
       if (from === 'start' || from === 'dispatch') {
         this.stage(job, 'dispatch', 'active');
-        if (from === 'dispatch') run = await gh.latestRun(owner, job.repo, WORKFLOW_FILE);
-        if (!run) await gh.dispatchWorkflow(owner, job.repo, WORKFLOW_FILE, p.branch || 'main');
-        for (let i = 0; i < 60 && !run; i++) {
-          run = await gh.latestRun(owner, job.repo, WORKFLOW_FILE);
-          if (!run) await this.sleep(this.pollMs);
+        for (const t of p.targets) {
+          if (t.runId) continue;
+          let run = from === 'dispatch' ? await gh.latestRun(owner, job.repo, t.file) : null;
+          if (!run) await gh.dispatchWorkflow(owner, job.repo, t.file, p.branch || 'main');
+          for (let i = 0; i < 60 && !run; i++) {
+            run = await gh.latestRun(owner, job.repo, t.file);
+            if (!run) await this.sleep(this.pollMs);
+          }
+          if (!run) throw new Error(`The run for ${t.name} never appeared.`);
+          Object.assign(t, { runId: run.id, url: run.html_url, number: run.run_number, status: run.status, conclusion: null });
+          this.update(job, { runUrl: job.runUrl || run.html_url, runs: publicRuns(p.targets) });
+          this.stage(job, 'dispatch', 'active', `${p.targets.filter((x) => x.runId).length}/${p.targets.length} started`);
         }
-        if (!run) throw new Error('The workflow run never appeared.');
-        p.runId = run.id;
-        this.update(job, { runUrl: run.html_url });
-        this.stage(job, 'dispatch', 'done', `Run #${run.run_number}`);
-      } else {
-        run = await gh.getRun(owner, job.repo, p.runId);
+        this.stage(job, 'dispatch', 'done', p.targets.length === 1 ? `Run #${p.targets[0].number}` : `${p.targets.length} runs`);
       }
 
-      this.stage(job, 'build', 'active', run.status);
-      while (run.status !== 'completed') {
+      this.stage(job, 'build', 'active', 'queued');
+      while (true) {
+        for (const t of p.targets) {
+          if (t.status === 'completed') continue;
+          const run = await gh.getRun(owner, job.repo, t.runId);
+          Object.assign(t, { status: run.status, conclusion: run.conclusion, url: run.html_url || t.url });
+        }
+        const done = p.targets.filter((t) => t.status === 'completed').length;
+        this.update(job, { runs: publicRuns(p.targets) });
+        if (done === p.targets.length) break;
+        this.stage(job, 'build', 'active', p.targets.length === 1 ? p.targets[0].status.replace('_', ' ') : `${done}/${p.targets.length} runs finished`);
         if (this.stopped) throw new Interrupted('stopping');
         await this.sleep(this.pollMs);
-        run = await gh.getRun(owner, job.repo, run.id);
-        this.stage(job, 'build', 'active', run.status.replace('_', ' '));
       }
-      if (run.conclusion !== 'success') {
-        let detail = `Run finished with ${run.conclusion}.`;
+      const failedRuns = p.targets.filter((t) => t.conclusion !== 'success');
+      const problems = [];
+      for (const t of failedRuns) {
+        let detail = `${p.targets.length > 1 ? `${t.name}: ` : ''}Run finished with ${t.conclusion}.`;
         try {
-          const jobs = await gh.runJobs(owner, job.repo, run.id);
+          const jobs = await gh.runJobs(owner, job.repo, t.runId);
           const failedSteps = jobs.flatMap((j) => (j.steps || []).filter((s) => s.conclusion === 'failure').map((s) => s.name));
           if (failedSteps.length) detail += ` Failed step: ${failedSteps.join(', ')}.`;
         } catch { /* best effort */ }
-        this.stage(job, 'build', 'failed', detail);
-        throw new Error(detail);
+        problems.push(detail);
       }
-      this.stage(job, 'build', 'done', 'success');
+      if (failedRuns.length === p.targets.length) {
+        this.stage(job, 'build', 'failed', problems.join(' '));
+        throw new Error(problems.join(' '));
+      }
+      this.stage(job, 'build', failedRuns.length ? 'failed' : 'done', failedRuns.length ? `${failedRuns.length} of ${p.targets.length} runs failed` : 'success');
 
       this.stage(job, 'download', 'active');
-      const outputs = await this.collect(job, gh, owner, run.id);
+      const outputs = await this.collect(job, gh, owner, p.targets.filter((t) => t.conclusion === 'success'));
       const total = outputs.reduce((n, o) => n + o.size, 0);
       this.stage(job, 'download', 'done', `${outputs.length} file${outputs.length === 1 ? '' : 's'} · ${formatBytes(total)}${enc ? ' · decrypted' : ''}`);
-      this.update(job, { outputs });
+      this.update(job, { outputs, error: problems.length ? problems.join(' ') : null });
     } catch (err) {
       if (err instanceof Interrupted && err.message === 'stopping') return; // app shutting down: journal resumes it
       failed = true;
@@ -395,7 +426,12 @@ export class JobManager extends EventEmitter {
       let plainDir = null;
       if (req.kind === 'scripts') {
         const [o, r] = req.repo.split('/');
-        const res = await user.downloadTarball(o, r, req.ref);
+        // Pin the branch to one commit so pushes made while this runs don't
+        // mix into the build.
+        const commit = await user.getCommit(o, r, req.ref);
+        p.sha = commit.sha;
+        this.update(job, { sha: commit.sha, subtitle: `${job.subtitle} · ${commit.sha.slice(0, 7)}` });
+        const res = await user.downloadTarball(o, r, commit.sha);
         await pipeline(Readable.fromWeb(res.body), createWriteStream(join(work, SOURCE_TARBALL)));
         if (!enc) files.push({ path: SOURCE_TARBALL, content: await readLimited(join(work, SOURCE_TARBALL)) });
         plainDir = work;
@@ -420,52 +456,105 @@ export class JobManager extends EventEmitter {
         const { size } = await stat(sealedPath);
         this.stage(job, 'encrypt', 'done', `${packed.length} file${packed.length === 1 ? '' : 's'} · ${formatBytes(size)}`);
       }
-      files.push({ path: `.github/workflows/${WORKFLOW_FILE}`, content: renderWorkflow(req) });
+      p.targets = [];
+      const warnings = [];
+      if (req.kind === 'dockerfile' || req.scripts.length) {
+        files.push({ path: `.github/workflows/${WORKFLOW_FILE}`, content: renderWorkflow(req) });
+        p.targets.push({ file: WORKFLOW_FILE, name: req.kind === 'dockerfile' ? 'Docker build' : 'Build scripts' });
+      }
+      if (req.kind === 'scripts' && req.workflows.length) {
+        const [o, r] = req.repo.split('/');
+        const listing = await user.getContents(o, r, '.github/workflows', p.sha);
+        const all = (Array.isArray(listing) ? listing : []).filter((f) => f.type === 'file' && /\.ya?ml$/.test(f.name));
+        for (const want of req.workflows) {
+          if (!all.some((f) => f.path === want)) throw new Error(`${want} is not in ${req.repo}@${req.ref}.`);
+        }
+        // Every workflow goes in (reusable ones may be called), only the chosen ones start.
+        for (const f of all) {
+          if (f.name === WORKFLOW_FILE) throw new Error(`${f.path} clashes with the generated workflow name.`);
+          const raw = await user.getContents(o, r, f.path, p.sha);
+          const text = Buffer.from(raw.content || '', 'base64').toString('utf8');
+          const chosen = req.workflows.includes(f.path);
+          let t;
+          try {
+            t = transformWorkflow(text, { mode: job.mode, file: f.path });
+          } catch (err) {
+            if (chosen) throw err;
+            continue; // an unrelated broken workflow shouldn't block the build
+          }
+          files.push({ path: f.path, content: t.yaml });
+          if (chosen) {
+            const name = workflowName(text, f.name);
+            if (t.dispatchable) p.targets.push({ file: f.name, name });
+            else t.warnings.unshift('Only callable from other workflows, so it is not started on its own.');
+            for (const w of t.warnings) warnings.push(`${name}: ${w}`);
+          }
+        }
+        if (!p.targets.length) throw new Error('None of the chosen workflows can be started manually.');
+      }
+      this.update(job, { warnings, runs: publicRuns(p.targets) });
       return files;
     } finally {
       await rm(work, { recursive: true, force: true });
     }
   }
 
-  // Downloads the run's artifact and turns it into downloadable files.
-  async collect(job, gh, owner, runId) {
+  // Downloads every artifact of the given runs and turns them into files.
+  // Encrypted artifacts (lap-sap*) are opened with the run key.
+  async collect(job, gh, owner, targets) {
     const p = this.priv.get(job.id);
     const enc = job.mode === 'encrypted-public';
-    const artifacts = await gh.runArtifacts(owner, job.repo, runId);
-    const artifact = artifacts.find((a) => a.name === ARTIFACT_NAME) || artifacts.find((a) => a.name === 'docker-image');
-    if (!artifact) throw new Error('The run did not upload a lap sap.');
     const base = join(this.dataDir, job.id);
     const filesDir = join(base, 'files');
     await rm(filesDir, { recursive: true, force: true });
     await mkdir(filesDir, { recursive: true });
-    const zipPath = join(base, 'artifact.zip');
-    const res = await gh.downloadArtifact(owner, job.repo, artifact.id);
-    await pipeline(Readable.fromWeb(res.body), createWriteStream(zipPath));
-    try {
-      const entries = (await listEntries(zipPath)).filter((e) => !e.name.endsWith('/'));
-      if (enc) {
-        const sealedPath = join(base, SEALED_OUTPUT);
-        await extractEntry(zipPath, SEALED_OUTPUT, sealedPath);
-        try {
-          const opened = await open(sealedPath, filesDir, p.key);
-          return opened.map((f) => ({ name: f.path, size: f.size }));
-        } finally {
-          await rm(sealedPath, { force: true });
-        }
+    const found = [];
+    for (const t of targets) {
+      for (const a of await gh.runArtifacts(owner, job.repo, t.runId)) {
+        if (enc && !(a.name === ARTIFACT_NAME || a.name.startsWith(LAP_PREFIX))) continue;
+        found.push({ t, a });
       }
-      const out = [];
-      for (const e of entries) {
-        const name = safeRelPath(e.name);
-        const target = join(filesDir, name);
-        await mkdir(dirname(target), { recursive: true });
-        await extractEntry(zipPath, e.name, target);
-        out.push({ name, size: (await stat(target)).size });
-      }
-      if (!out.length) throw new Error('The lap sap was empty.');
-      return out;
-    } finally {
-      await rm(zipPath, { force: true });
     }
+    if (!found.length) throw new Error('The run did not upload a lap sap.');
+    // A single artifact lands flat; several get their own folders.
+    const flat = found.length === 1;
+    const out = [];
+    for (const [i, { t, a }] of found.entries()) {
+      const label = a.name === ARTIFACT_NAME || a.name === 'docker-image' ? '' : a.name.startsWith(LAP_PREFIX) ? a.name.slice(LAP_PREFIX.length) : a.name;
+      const prefix = flat ? '' : [targets.length > 1 ? slug(t.name) : '', slug(label || 'build')].filter(Boolean).join('/');
+      const dest = prefix ? join(filesDir, prefix) : filesDir;
+      await mkdir(dest, { recursive: true });
+      const zipPath = join(base, `artifact-${i}.zip`);
+      const res = await gh.downloadArtifact(owner, job.repo, a.id);
+      await pipeline(Readable.fromWeb(res.body), createWriteStream(zipPath));
+      try {
+        const entries = (await listEntries(zipPath)).filter((e) => !e.name.endsWith('/'));
+        if (enc) {
+          for (const e of entries.filter((x) => x.name.endsWith('.mac'))) {
+            const sealedPath = join(base, `sealed-${i}.mac`);
+            await extractEntry(zipPath, e.name, sealedPath);
+            try {
+              const opened = await open(sealedPath, dest, p.key);
+              out.push(...opened.map((f) => ({ name: prefix ? `${prefix}/${f.path}` : f.path, size: f.size })));
+            } finally {
+              await rm(sealedPath, { force: true });
+            }
+          }
+          continue;
+        }
+        for (const e of entries) {
+          const name = safeRelPath(e.name);
+          const target = join(dest, name);
+          await mkdir(dirname(target), { recursive: true });
+          await extractEntry(zipPath, e.name, target);
+          out.push({ name: prefix ? `${prefix}/${name}` : name, size: (await stat(target)).size });
+        }
+      } finally {
+        await rm(zipPath, { force: true });
+      }
+    }
+    if (!out.length) throw new Error('The lap saps were empty.');
+    return out;
   }
 
   filePath(id, index = 0) {
@@ -519,6 +608,14 @@ async function readLimited(path) {
   const { size } = await stat(path);
   if (size > MAX_UPLOAD) throw new Error(`Source is ${formatBytes(size)}; the limit is ${formatBytes(MAX_UPLOAD)}.`);
   return readFile(path);
+}
+
+function slug(s) {
+  return String(s).replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^[-.]+|-+$/g, '').slice(0, 60) || 'build';
+}
+
+function publicRuns(targets) {
+  return targets.map((t) => ({ name: t.name, file: t.file, url: t.url || null, status: t.status || 'pending', conclusion: t.conclusion || null }));
 }
 
 export function formatBytes(n) {

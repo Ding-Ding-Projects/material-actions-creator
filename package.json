@@ -1,6 +1,6 @@
 {
   "name": "material-actions-creator",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Web app that turns Dockerfiles or a repository's build scripts into throwaway GitHub Actions runs (private, or encrypted on a public builder), hands back the lap saps, and cleans up.",
   "type": "module",
   "main": "src/server.js",
@@ -11,11 +11,16 @@
     "start": "node src/server.js",
     "test": "node --test \"test/**/*.test.js\"",
     "check": "for f in src/*.js src/*.mjs public/app.js scripts/*.js; do node --check \"$f\" || exit 1; done",
-    "render-workflow": "node scripts/render-workflow.js"
+    "render-workflow": "node scripts/render-workflow.js",
+    "cli": "node src/cli.js"
   },
   "license": "MIT",
   "dependencies": {
     "blakejs": "1.2.1",
-    "tweetnacl": "1.0.3"
+    "tweetnacl": "1.0.3",
+    "yaml": "2.9.1"
+  },
+  "bin": {
+    "mac": "src/cli.js"
   }
 }

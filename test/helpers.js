@@ -48,6 +48,47 @@ export function makeZip(entries, { method = 8 } = {}) {
 }
 
 export const SOURCE_TARBALL_BYTES = Buffer.from('pretend source tarball of map-editor');
+export const SOURCE_SHA = 'abc1234def5678900000000000000000000000ff';
+export const SOURCE_WORKFLOWS = {
+  '.github/workflows/release.yml': `name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: build\\installer.bat
+        shell: cmd
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers
+          path: dist/*.exe
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+`,
+  '.github/workflows/lint.yml': `name: Lint
+on: [push, pull_request]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo lint
+`,
+  '.github/workflows/reusable.yml': `on:
+  workflow_call:
+jobs:
+  x:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo called
+`,
+};
 
 // In-memory fake of the GitHub REST API. When a workflow is dispatched it
 // "runs" it: for encrypted runs it opens the sealed MAC_KEY secret with the
@@ -58,16 +99,18 @@ export function fakeGitHub({
   scopes = 'repo, workflow, delete_repo', pollsUntilDone = 2, legacyArtifact = null,
 } = {}) {
   const repoKeys = nacl.box.keyPair();
-  const state = { repos: new Map(), calls: [], runPolls: 0, revoked: 0, deleted: [], seen: {} };
+  const state = { repos: new Map(), calls: [], runPolls: 0, revoked: 0, deleted: [], seen: {}, runs: new Map(), nextRun: 77, failFiles: new Set() };
   const reply = (status, data, headers = {}) => new Response(status === 204 ? null : JSON.stringify(data), {
     status, headers: { 'content-type': 'application/json', ...headers },
   });
 
-  async function runWorkflow(repo) {
+  async function runWorkflow(repo, file) {
     const dir = await mkdtemp(join(tmpdir(), 'fake-runner-'));
     try {
       const enc = Boolean(repo.files['src.mac']);
-      const isScripts = (repo.files['.github/workflows/build.yml'] || '').includes('Run script');
+      const wfText = repo.files[`.github/workflows/${file}`] || '';
+      const isSource = file !== 'mac-build.yml';
+      const isScripts = isSource || wfText.includes('Run script');
       let key = null;
       if (enc) {
         key = sealedBoxOpen(repo.secrets.MAC_KEY, repoKeys.publicKey, repoKeys.secretKey)?.toString();
@@ -78,25 +121,29 @@ export function fakeGitHub({
       if (isScripts) {
         const tarball = enc ? await readFile(join(dir, 'in', 'src.tar.gz')) : repo.filesRaw['src.tar.gz'];
         state.seen.tarball = tarball.toString();
-        outputs = [
-          { name: 'Setup-1.0.exe', data: Buffer.from(`EXE built from ${tarball}`) },
-          { name: 'msi/Setup-1.0.msi', data: Buffer.from('MSI') },
-        ];
+        outputs = isSource
+          ? [{ name: 'dist/App-from-workflow.exe', data: Buffer.from(`${file} built from ${tarball}`) }]
+          : [
+            { name: 'Setup-1.0.exe', data: Buffer.from(`EXE built from ${tarball}`) },
+            { name: 'msi/Setup-1.0.msi', data: Buffer.from('MSI') },
+          ];
       } else {
         const dockerfile = enc ? await readFile(join(dir, 'in', 'Dockerfile'), 'utf8') : repo.files['context/Dockerfile'];
         state.seen.dockerfile = dockerfile;
         outputs = [{ name: 'image.tar.gz', data: Buffer.from(`IMAGE:${dockerfile}`) }];
       }
       state.seen.outputs = outputs;
-      if (legacyArtifact) return makeZip([{ name: 'image.tar.gz', data: legacyArtifact }]);
-      if (!enc) return makeZip(outputs);
+      const artName = isSource ? 'installers' : 'lap-sap';
+      if (legacyArtifact) return [{ name: 'docker-image', zip: makeZip([{ name: 'image.tar.gz', data: legacyArtifact }]) }];
+      if (!enc) return [{ name: artName, zip: makeZip(outputs) }];
       const outDir = join(dir, 'out');
       for (const o of outputs) {
         await mkdir(dirname(join(outDir, o.name)), { recursive: true });
         await writeFile(join(outDir, o.name), o.data);
       }
       await seal(join(dir, 'out.mac'), outDir, ['**/*'], key);
-      return makeZip([{ name: 'out.mac', data: await readFile(join(dir, 'out.mac')) }], { method: 0 });
+      const zip = makeZip([{ name: isSource ? 'mac-out-0.mac' : 'out.mac', data: await readFile(join(dir, 'out.mac')) }], { method: 0 });
+      return [{ name: isSource ? `lap-sap-${artName}` : 'lap-sap', zip }];
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -122,9 +169,22 @@ export function fakeGitHub({
       return reply(200, { tree: [
         { path: 'build/installer.bat', type: 'blob' }, { path: 'tools/clean.cmd', type: 'blob' },
         { path: 'README.md', type: 'blob' }, { path: 'dist/.keep', type: 'blob' },
+        ...Object.keys(SOURCE_WORKFLOWS).map((p) => ({ path: p, type: 'blob' })),
       ] });
     }
-    if (method === 'GET' && path.startsWith('/repos/Ding-Ding-Projects/map-editor/tarball/')) return new Response(SOURCE_TARBALL_BYTES, { status: 200 });
+    if (method === 'GET' && path.startsWith('/repos/Ding-Ding-Projects/map-editor/commits/')) return reply(200, { sha: SOURCE_SHA });
+    if (method === 'GET' && path === '/repos/Ding-Ding-Projects/map-editor/contents/.github/workflows') {
+      state.seen.contentsRef = u.searchParams.get('ref');
+      return reply(200, Object.keys(SOURCE_WORKFLOWS).map((p) => ({ type: 'file', path: p, name: p.split('/').pop() })));
+    }
+    if (method === 'GET' && path.startsWith('/repos/Ding-Ding-Projects/map-editor/contents/.github/workflows/')) {
+      const p = decodeURIComponent(path.slice('/repos/Ding-Ding-Projects/map-editor/contents/'.length));
+      return SOURCE_WORKFLOWS[p] ? reply(200, { content: Buffer.from(SOURCE_WORKFLOWS[p]).toString('base64'), encoding: 'base64' }) : reply(404, { message: 'Not Found' });
+    }
+    if (method === 'GET' && path.startsWith('/repos/Ding-Ding-Projects/map-editor/tarball/')) {
+      state.seen.tarballRef = decodeURIComponent(path.split('/').pop());
+      return new Response(SOURCE_TARBALL_BYTES, { status: 200 });
+    }
     if ((m = path.match(/^\/repos\/[^/]+\/([^/]+)(\/.*)?$/))) {
       const repo = state.repos.get(m[1]);
       const rest = m[2] || '';
@@ -148,22 +208,35 @@ export function fakeGitHub({
         repo.secrets[rest.split('/').pop()] = body.encrypted_value;
         return reply(201, {});
       }
-      if (method === 'POST' && rest.endsWith('/dispatches')) {
-        repo.dispatched = true;
-        repo.artifact = await runWorkflow(repo);
+      let wm;
+      if (method === 'POST' && (wm = rest.match(/^\/actions\/workflows\/([^/]+)\/dispatches$/))) {
+        const file = wm[1];
+        if (!repo.files[`.github/workflows/${file}`]) return reply(404, { message: 'workflow not found' });
+        const id = state.nextRun++;
+        const artifacts = (await runWorkflow(repo, file)).map((a, i) => ({ ...a, id: id * 10 + i }));
+        state.runs.set(id, { id, file, repo: repo.name, artifacts, number: 1 });
         return reply(204);
       }
-      if (method === 'GET' && rest.includes('/workflows/') && rest.endsWith('/runs')) {
-        return reply(200, { workflow_runs: repo.dispatched ? [{ id: 77, run_number: 1, status: 'queued', html_url: 'https://github.com/run/77' }] : [] });
+      if (method === 'GET' && (wm = rest.match(/^\/actions\/workflows\/([^/]+)\/runs$/))) {
+        const runs = [...state.runs.values()].filter((r) => r.repo === repo.name && r.file === wm[1]).reverse();
+        return reply(200, { workflow_runs: runs.map((r) => ({ id: r.id, run_number: 1, status: 'queued', html_url: `https://github.com/run/${r.id}` })) });
       }
-      if (method === 'GET' && rest === '/actions/runs/77') {
+      if (method === 'GET' && (wm = rest.match(/^\/actions\/runs\/(\d+)$/))) {
+        const r = state.runs.get(Number(wm[1]));
         state.runPolls++;
         const done = state.runPolls >= pollsUntilDone;
-        return reply(200, { id: 77, run_number: 1, status: done ? 'completed' : 'in_progress', conclusion: done ? conclusion : null, html_url: 'https://github.com/run/77' });
+        const c = state.failFiles.has(r.file) ? 'failure' : conclusion;
+        return reply(200, { id: r.id, run_number: 1, status: done ? 'completed' : 'in_progress', conclusion: done ? c : null, html_url: `https://github.com/run/${r.id}` });
       }
-      if (method === 'GET' && rest === '/actions/runs/77/jobs') return reply(200, { jobs: [{ steps: [{ name: 'Run script 1', conclusion: 'failure' }] }] });
-      if (method === 'GET' && rest === '/actions/runs/77/artifacts') return reply(200, { artifacts: [{ id: 5, name: 'lap-sap' }] });
-      if (method === 'GET' && rest === '/actions/artifacts/5/zip') return new Response(repo.artifact, { status: 200 });
+      if (method === 'GET' && (wm = rest.match(/^\/actions\/runs\/(\d+)\/jobs$/))) return reply(200, { jobs: [{ steps: [{ name: 'Run script 1', conclusion: 'failure' }] }] });
+      if (method === 'GET' && (wm = rest.match(/^\/actions\/runs\/(\d+)\/artifacts$/))) {
+        const r = state.runs.get(Number(wm[1]));
+        return reply(200, { artifacts: r.artifacts.map((a) => ({ id: a.id, name: a.name })) });
+      }
+      if (method === 'GET' && (wm = rest.match(/^\/actions\/artifacts\/(\d+)\/zip$/))) {
+        const a = [...state.runs.values()].flatMap((r) => r.artifacts).find((x) => x.id === Number(wm[1]));
+        return new Response(a.zip, { status: 200 });
+      }
     }
     return reply(500, { message: `unhandled ${method} ${path}` });
   };

@@ -303,3 +303,22 @@ a.fab { text-decoration: none; }
   .recovery .btn { flex: 1; }
   .run-top { flex-wrap: wrap; }
 }
+
+/* ---------- v3: repository workflows, sub-runs ---------- */
+.select-all { display: flex; gap: 16px; margin: -4px 0 10px; }
+.quiet-link { color: var(--muted); }
+.explain { margin: 0 0 12px; line-height: 1.5; }
+.script.disabled { opacity: .55; }
+.wf-text { display: grid; min-width: 0; }
+.wf-path { font: 12px var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.script { flex-wrap: wrap; }
+.wf-warn { width: 100%; font-size: 13px; color: var(--amber); padding: 0 0 4px 32px; }
+.wf-warn summary { cursor: pointer; font: 600 12px var(--mono); }
+.wf-warn ul { margin: 6px 0 0; padding-left: 18px; color: #d9c79a; line-height: 1.5; }
+.run-warn { padding: 12px 0 0; }
+.subruns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.subrun { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--ink-2); color: var(--text); font-size: 13px; text-decoration: none; }
+.subrun .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--violet); }
+.subrun.success .dot { background: var(--lime); }
+.subrun.failure .dot, .subrun.cancelled .dot { background: var(--coral); }
+.subrun .muted { font: 11px var(--mono); }

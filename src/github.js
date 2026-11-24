@@ -79,6 +79,15 @@ export class GitHubClient {
     return this.request('GET', `/repos/${owner}/${repo}`);
   }
 
+  async getCommit(owner, repo, ref) {
+    return this.request('GET', `/repos/${owner}/${repo}/commits/${encodeURIComponent(ref)}`);
+  }
+
+  async getContents(owner, repo, path, ref) {
+    const encoded = path.split('/').map(encodeURIComponent).join('/');
+    return this.request('GET', `/repos/${owner}/${repo}/contents/${encoded}${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`);
+  }
+
   async getTree(owner, repo, ref) {
     return this.request('GET', `/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`);
   }

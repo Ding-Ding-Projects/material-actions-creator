@@ -37,6 +37,7 @@ const state = {
     repo: savedWf.repo || '',
     ref: savedWf.ref || '',
     scripts: savedWf.scripts || [],
+    workflows: savedWf.workflows || [],
     runner: savedWf.runner || 'windows-latest',
     outputs: savedWf.outputs || 'dist/**/*.exe, dist/**/*.msi',
     mode: savedWf.mode || 'private',
@@ -122,6 +123,26 @@ function renderScripts() {
       </span>
     </li>`).join('');
 }
+function renderWorkflows() {
+  const list = $('#wfWorkflows');
+  list.innerHTML = state.wf.workflows.map((w, i) => `
+    <li class="script ${w.on ? 'on' : ''} ${w.dispatchable ? '' : 'disabled'}">
+      <label><input type="checkbox" data-wf-toggle="${i}" ${w.on ? 'checked' : ''} ${w.dispatchable ? '' : 'disabled'}>
+        <span class="wf-text"><span class="path">${esc(w.name)}</span><span class="wf-path">${esc(w.path)}${w.dispatchable ? '' : ' · callable only'}</span></span></label>
+      ${w.warnings?.length ? `<details class="wf-warn"><summary>${w.warnings.length} change${w.warnings.length === 1 ? '' : 's'}</summary><ul>${w.warnings.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
+    </li>`).join('');
+}
+$('#wfWorkflows').addEventListener('change', (e) => {
+  const t = e.target.closest('[data-wf-toggle]');
+  if (!t) return;
+  state.wf.workflows[+t.dataset.wfToggle].on = t.checked;
+  saveWf(); renderWorkflows(); schedulePreview();
+});
+$('#wfAllWorkflows').addEventListener('click', () => { state.wf.workflows.forEach((w) => { w.on = w.dispatchable; }); saveWf(); renderWorkflows(); schedulePreview(); });
+$('#wfNoWorkflows').addEventListener('click', () => { state.wf.workflows.forEach((w) => { w.on = false; }); saveWf(); renderWorkflows(); schedulePreview(); });
+$('#wfAllScripts').addEventListener('click', () => { state.wf.scripts.forEach((s) => { s.on = true; }); saveWf(); renderScripts(); schedulePreview(); });
+$('#wfNoScripts').addEventListener('click', () => { state.wf.scripts.forEach((s) => { s.on = false; }); saveWf(); renderScripts(); schedulePreview(); });
+
 $('#wfScripts').addEventListener('click', (e) => {
   const s = state.wf.scripts;
   const up = e.target.closest('[data-sc-up]'); const down = e.target.closest('[data-sc-down]');
@@ -151,7 +172,7 @@ $('#wfScan').addEventListener('click', async () => {
   btn.disabled = true;
   $('#wfScriptHint').textContent = 'Scanning…';
   try {
-    const q = new URLSearchParams({ repo: $('#wfRepo').value.trim() });
+    const q = new URLSearchParams({ repo: $('#wfRepo').value.trim(), mode: state.wf.mode });
     if ($('#wfRef').value.trim()) q.set('ref', $('#wfRef').value.trim());
     const r = await api(`/api/scripts?${q}`);
     state.wf.repo = r.repo;
@@ -162,7 +183,10 @@ $('#wfScan').addEventListener('click', async () => {
     if (!state.wf.scripts.some((s) => s.on) && state.wf.scripts[0]) state.wf.scripts[0].on = true;
     if (!savedWf.outputs) { state.wf.outputs = r.outputsGuess; $('#wfOutputs').value = r.outputsGuess; }
     $('#wfScriptHint').textContent = r.scripts.length ? `Found ${r.scripts.length} script${r.scripts.length === 1 ? '' : 's'} · tick and order them` : 'No scripts found — add a path below';
-    saveWf(); renderScripts(); schedulePreview();
+    const keepWf = new Map(state.wf.workflows.map((w) => [w.path, w.on]));
+    state.wf.workflows = r.workflows.map((w) => ({ ...w, on: w.dispatchable && (keepWf.get(w.path) ?? false) }));
+    $('#wfWorkflowHint').textContent = r.workflows.length ? `Found ${r.workflows.length} workflow${r.workflows.length === 1 ? '' : 's'}` : 'This repository has no workflows';
+    saveWf(); renderScripts(); renderWorkflows(); schedulePreview();
   } catch (err) {
     $('#wfScriptHint').textContent = err.message;
   } finally { btn.disabled = false; }
@@ -189,6 +213,7 @@ function wfRequest() {
     ref: state.wf.ref,
     runner: state.wf.runner,
     scripts: state.wf.scripts.filter((s) => s.on).map((s) => s.path),
+    workflows: state.wf.workflows.filter((w) => w.on).map((w) => w.path),
     outputs: state.wf.outputs,
     mode: state.wf.mode,
   };
@@ -199,11 +224,19 @@ function schedulePreview() {
   clearTimeout(previewTimer);
   previewTimer = setTimeout(renderPreview, 250);
   const r = wfRequest();
-  $('#wfSummary').textContent = `${r.scripts.length} script${r.scripts.length === 1 ? '' : 's'} · ${r.runner} · ${MODE_COPY[r.mode].title.toLowerCase()}`;
+  $('#wfSummary').textContent = `${r.scripts.length} script${r.scripts.length === 1 ? '' : 's'} · ${r.workflows.length} workflow${r.workflows.length === 1 ? '' : 's'} · ${MODE_COPY[r.mode].title.toLowerCase()}`;
 }
 async function renderPreview() {
   try {
-    const { yaml } = await api('/api/preview', { method: 'POST', body: wfRequest() });
+    const req = wfRequest();
+    if (!req.scripts.length && req.workflows.length) {
+      $('#wfYaml').innerHTML = esc(`# No generated script workflow.\n# These repository workflows will run, rewritten:\n${req.workflows.map((w) => `#   ${w}`).join('\n')}\n`);
+      $('#wfYamlState').textContent = 'workflows only';
+      $('#wfYamlState').className = 'ok';
+      $('#wfYaml').dataset.yaml = '';
+      return;
+    }
+    const { yaml } = await api('/api/preview', { method: 'POST', body: req });
     $('#wfYaml').innerHTML = highlightYaml(yaml);
     $('#wfYamlState').textContent = 'live preview';
     $('#wfYamlState').className = 'ok';
@@ -411,6 +444,8 @@ function buildCard(job) {
     <ol class="stages">${job.stages.map((s) => `
       <li class="${s.state}"><span class="dot"></span><span>${esc(s.label)}</span><span class="detail" title="${esc(s.detail)}">${esc(s.detail || '')}</span></li>`).join('')}
     </ol>
+    ${job.runs?.length > 1 ? `<div class="subruns">${job.runs.map((r) => `<a class="subrun ${r.conclusion || r.status}" ${r.url && job.status === 'running' ? `href="${esc(r.url)}" target="_blank" rel="noopener"` : ''}><span class="dot"></span>${esc(r.name)}<span class="muted">${esc(r.conclusion || r.status)}</span></a>`).join('')}</div>` : ''}
+    ${job.warnings?.length ? `<details class="wf-warn run-warn"><summary>${job.warnings.length} workflow change${job.warnings.length === 1 ? '' : 's'}</summary><ul>${job.warnings.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
     ${job.error ? `<p class="run-error">${esc(job.error)}</p>` : ''}
     ${job.outputs?.length && job.status === 'ready' ? `
       <div class="laps">
@@ -623,6 +658,7 @@ async function boot() {
 setTab(state.tab);
 renderModes();
 renderScripts();
+renderWorkflows();
 renderRunners();
 renderPlatforms();
 renderArgs();

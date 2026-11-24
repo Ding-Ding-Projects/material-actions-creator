@@ -2,6 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { renderWorkflow, validateRequest } from '../src/workflow.js';
+import { transformWorkflow } from '../src/transform.js';
 
 const out = process.argv[2] || 'rendered-workflows';
 mkdirSync(out, { recursive: true });
@@ -17,4 +18,42 @@ for (const s of samples) {
   const req = validateRequest(s);
   writeFileSync(join(out, `${s.name}.yml`), renderWorkflow(req));
   console.log(`wrote ${join(out, `${s.name}.yml`)}`);
+}
+
+// A source repository's own workflow, rewritten both ways, must stay valid too.
+const sourceWorkflow = `name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: build\\installer.bat
+        shell: cmd
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers
+          path: dist/*.exe
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: installers
+          path: dist
+      - uses: actions/download-artifact@v4
+`;
+for (const mode of ['private', 'encrypted-public']) {
+  const file = join(out, `source-${mode}.yml`);
+  writeFileSync(file, transformWorkflow(sourceWorkflow, { mode, file: 'release.yml' }).yaml);
+  console.log(`wrote ${file}`);
 }

@@ -54,7 +54,7 @@ test('private Dockerfile build: commit, download and delete', async () => {
   assert.equal(job.downloadUrl, `/api/builds/${job.id}/files/0`);
   assert.equal(await readFile(jobs.filePath(job.id, 0), 'utf8'), 'IMAGE:FROM alpine\n');
   assert.equal(gh.state.repos.size, 0, 'temporary repo must be deleted');
-  assert.deepEqual(Object.keys(snapshot.files).sort(), ['.github/workflows/build.yml', 'README.md', 'context/Dockerfile', 'context/app/run.sh']);
+  assert.deepEqual(Object.keys(snapshot.files).sort(), ['.github/workflows/mac-build.yml', 'README.md', 'context/Dockerfile', 'context/app/run.sh']);
   assert.equal(snapshot.private, true);
 });
 
@@ -69,7 +69,7 @@ test('encrypted Dockerfile build: public repo holds only ciphertext, image comes
   assert.deepEqual(states(job), Array(9).fill('done'));
   assert.equal(job.keySource, 'session');
   assert.equal(snapshot.private, false);
-  assert.deepEqual(Object.keys(snapshot.files).sort(), ['.github/workflows/build.yml', '.mac/crypt.mjs', 'README.md', 'src.mac']);
+  assert.deepEqual(Object.keys(snapshot.files).sort(), ['.github/workflows/mac-build.yml', '.mac/crypt.mjs', 'README.md', 'src.mac']);
   const everything = Object.values(snapshot.filesRaw).map((b) => b.toString('latin1')).join('\n');
   assert.ok(!everything.includes('echo secret'), 'plaintext source leaked into the public repo');
   assert.ok(!everything.includes('COPY app'), 'Dockerfile leaked into the public repo');
@@ -222,4 +222,61 @@ test('sweep deletes only stale prefixed repos', async () => {
   const deleted = await jobs.sweep();
   assert.deepEqual(deleted.sort(), [`${PUBLIC_PREFIX}old`, `${REPO_PREFIX}old`]);
   assert.ok(gh.state.repos.has('important-project'));
+});
+
+const withWorkflows = { ...scriptsEnc, workflows: ['.github/workflows/release.yml', '.github/workflows/lint.yml'] };
+
+test('encrypted run of the source repository\'s own workflows plus scripts', async () => {
+  const { gh, jobs } = await setup();
+  let snapshot;
+  const created = jobs.create(validateRequest(withWorkflows));
+  jobs.on('update', (j) => { if (j.stages.find((s) => s.id === 'commit').state === 'done' && !snapshot) snapshot = structuredClone(gh.state.repos.get(j.repo)); });
+  const job = await finish(jobs, created.id);
+  assert.equal(job.status, 'ready', job.error);
+  // Pinned to one commit for the whole build.
+  assert.equal(gh.state.seen.tarballRef, 'abc1234def5678900000000000000000000000ff');
+  assert.equal(gh.state.seen.contentsRef, 'abc1234def5678900000000000000000000000ff');
+  assert.match(job.subtitle, /abc1234/);
+  // Every source workflow is committed (rewritten); three runs start: scripts, Release, Lint.
+  const wfFiles = Object.keys(snapshot.files).filter((p) => p.startsWith('.github/workflows/')).sort();
+  assert.deepEqual(wfFiles, ['.github/workflows/lint.yml', '.github/workflows/mac-build.yml', '.github/workflows/release.yml', '.github/workflows/reusable.yml']);
+  assert.match(snapshot.files['.github/workflows/release.yml'], /Rewritten by material-actions-creator/);
+  assert.doesNotMatch(snapshot.files['.github/workflows/release.yml'], /action-gh-release/);
+  assert.deepEqual(job.runs.map((r) => r.name), ['Build scripts', 'Release', 'Lint']);
+  assert.ok(job.runs.every((r) => r.conclusion === 'success'));
+  assert.ok(job.warnings.some((w) => /^Release: .*removed publishing step/.test(w)));
+  // Lap saps from every run, decrypted into one folder per run/artifact.
+  const names = job.outputs.map((o) => o.name).sort();
+  assert.ok(names.includes('Release/installers/dist/App-from-workflow.exe'), names.join());
+  assert.ok(names.includes('Build-scripts/build/Setup-1.0.exe'), names.join());
+  const idx = job.outputs.findIndex((o) => o.name === 'Release/installers/dist/App-from-workflow.exe');
+  assert.equal(await readFile(jobs.filePath(job.id, idx), 'utf8'), `release.yml built from ${SOURCE_TARBALL_BYTES}`);
+});
+
+test('one failing workflow still delivers the others and says which failed', async () => {
+  const { gh, jobs } = await setup();
+  gh.state.failFiles.add('lint.yml');
+  const job = await finish(jobs, jobs.create(validateRequest(withWorkflows)).id);
+  assert.equal(job.status, 'ready');
+  assert.match(job.error, /Lint: Run finished with failure/);
+  assert.equal(job.stages.find((s) => s.id === 'build').state, 'failed');
+  assert.ok(job.outputs.length >= 2);
+  assert.equal(gh.state.repos.size, 0);
+});
+
+test('workflows-only runs need no scripts or outputs', async () => {
+  const { jobs } = await setup();
+  const req = validateRequest({ kind: 'scripts', repo: 'Ding-Ding-Projects/map-editor', workflows: ['.github/workflows/release.yml'], mode: 'encrypted-public' });
+  const job = await finish(jobs, jobs.create(req).id);
+  assert.equal(job.status, 'ready', job.error);
+  assert.deepEqual(job.runs.map((r) => r.name), ['Release']);
+  assert.deepEqual(job.outputs.map((o) => o.name), ['dist/App-from-workflow.exe']);
+});
+
+test('choosing a missing or reusable-only workflow fails clearly', async () => {
+  const { jobs } = await setup();
+  const missing = await finish(jobs, jobs.create(validateRequest({ kind: 'scripts', repo: 'Ding-Ding-Projects/map-editor', workflows: ['.github/workflows/nope.yml'] })).id);
+  assert.match(missing.error, /nope\.yml is not in/);
+  const reusable = await finish(jobs, jobs.create(validateRequest({ kind: 'scripts', repo: 'Ding-Ding-Projects/map-editor', workflows: ['.github/workflows/reusable.yml'] })).id);
+  assert.match(reusable.error, /can be started manually/);
 });

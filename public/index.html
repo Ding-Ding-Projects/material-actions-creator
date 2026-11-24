@@ -62,6 +62,7 @@
 
       <div class="panel">
         <div class="panel-head"><p class="step">02 · Build scripts</p><span class="muted small" id="wfScriptHint">Scan a repository to find .bat, .cmd, .ps1 and .sh files</span></div>
+        <div class="select-all"><button class="text-btn" type="button" id="wfAllScripts">Run all scripts</button><button class="text-btn quiet-link" type="button" id="wfNoScripts">None</button></div>
         <ol class="script-list" id="wfScripts"></ol>
         <div class="add-script">
           <input id="wfAddScript" placeholder="or type a path, e.g. build\installer.bat" spellcheck="false" aria-label="Script path">
@@ -69,27 +70,34 @@
         </div>
       </div>
 
+      <div class="panel">
+        <div class="panel-head"><p class="step">03 · The repository's own workflows</p><span class="muted small" id="wfWorkflowHint">Scan to list .github/workflows</span></div>
+        <p class="muted small explain">Each chosen workflow runs inside the temporary repository: triggers become a manual start, permissions become read-only, publishing steps are removed, and in encrypted mode every artifact is sealed before upload.</p>
+        <div class="select-all"><button class="text-btn" type="button" id="wfAllWorkflows">Run all workflows</button><button class="text-btn quiet-link" type="button" id="wfNoWorkflows">None</button></div>
+        <ol class="script-list" id="wfWorkflows"></ol>
+      </div>
+
       <div class="split">
         <div class="panel">
-          <p class="step">03 · Runner</p>
+          <p class="step">04 · Runner for scripts</p>
           <div class="chips" id="wfRunners" role="radiogroup" aria-label="Runner"></div>
         </div>
         <div class="panel">
-          <p class="step">04 · Lap saps</p>
+          <p class="step">05 · Lap saps from scripts</p>
           <label class="field"><span>Output files (globs, relative to the repository)</span>
             <input id="wfOutputs" value="dist/**/*.exe, dist/**/*.msi" spellcheck="false"></label>
         </div>
       </div>
 
       <div class="panel">
-        <p class="step">05 · Where it runs</p>
+        <p class="step">06 · Where it runs</p>
         <div class="modes" data-mode-group="wf"></div>
       </div>
     </section>
 
     <aside class="stack-col sticky">
       <div class="yaml-card">
-        <div class="yaml-head"><span>.github/workflows/build.yml</span><span class="ok" id="wfYamlState">live preview</span></div>
+        <div class="yaml-head"><span>.github/workflows/mac-build.yml</span><span class="ok" id="wfYamlState">live preview</span></div>
         <pre id="wfYaml" class="yaml"></pre>
       </div>
       <div class="run-bar">
