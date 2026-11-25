@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "0.7.1",
+      "date": "2026-11-25",
+      "title": "Browse for it",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Browse… beside the local folder field: a folder picker with breadcrumbs, a filter, a hidden-folder switch and hints for folders that hold workflows, scripts or a Dockerfile."
+        },
+        {
+          "type": "added",
+          "text": "Open files… on the Dockerfile tab loads a Dockerfile and extra files from this computer."
+        }
+      ]
+    },
+    {
       "version": "0.7.0",
       "date": "2026-11-25",
       "title": "Run on this computer",

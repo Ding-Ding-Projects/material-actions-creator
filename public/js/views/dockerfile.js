@@ -5,6 +5,16 @@ import { t, h, v, esc } from '../core/i18n.js';
 import { notify } from '../core/feedback.js';
 import { modeCards } from '../ui/modes.js';
 import { requireSignIn } from '../ui/auth.js';
+import { STRINGS } from '../core/strings.js';
+
+Object.assign(STRINGS, {
+  'docker.openFiles': { en: 'Open files…', yue: '開啟檔案…' },
+  'docker.opened': { en: 'Loaded {n} file(s) from this computer.', yue: '由呢部電腦載入咗 {n} 個檔案。' },
+  'docker.skipped': { en: 'Not loaded: {list}', yue: '冇載入：{list}' },
+  'docker.tooBig': { en: 'over 512 KB', yue: '超過 512 KB' },
+  'docker.binary': { en: 'not a text file', yue: '唔係文字檔' },
+  'docker.tooMany': { en: 'the limit is 50 extra files', yue: '額外檔案上限係 50 個' },
+});
 
 const TEMPLATES = {
   Node: [`FROM node:22-alpine\nWORKDIR /app\nCOPY server.js .\nEXPOSE 3000\nCMD ["node", "server.js"]\n`, [{ path: 'server.js', content: "require('http').createServer((q, r) => r.end('hello')).listen(3000);\n" }]],
@@ -41,10 +51,33 @@ function renderTabs() {
     <button class="tab" role="tab" type="button" data-i="${i}" aria-selected="${i === s.active}">
       ${f.editing ? `<input data-rename="${i}" value="${esc(f.path)}" aria-label="${esc(f.path)}">` : esc(f.path)}
       ${f.fixed ? '' : `<span class="x" data-del="${i}" role="button" aria-label="${esc(t('tabs.close'))}: ${esc(f.path)}">×</span>`}
-    </button>`).join('') + `<button class="tab add" type="button" id="addFile">${h('docker.addFile')}</button>`;
+    </button>`).join('') + `<button class="tab add" type="button" id="addFile">${h('docker.addFile')}</button><label class="tab add" data-own-drop><input type="file" multiple hidden id="openFiles">📄 ${h('docker.openFiles')}</label>`;
   $('#tabs input')?.focus();
 }
 function renderAll() { renderTabs(); renderEditor(); }
+
+// Loads files picked from this computer: a file named Dockerfile fills the
+// editor, the rest become extra files. Limits match the server's.
+async function loadFiles(files) {
+  let loaded = 0;
+  const skipped = [];
+  for (const file of files) {
+    if (file.size > 512 * 1024) { skipped.push(`${file.name} (${t('docker.tooBig')})`); continue; }
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (bytes.includes(0)) { skipped.push(`${file.name} (${t('docker.binary')})`); continue; }
+    const content = new TextDecoder().decode(bytes);
+    const isDocker = /^dockerfile(\..+)?$/i.test(file.name) || /\.dockerfile$/i.test(file.name);
+    if (isDocker) { s.files[0].content = content; s.active = 0; loaded++; continue; }
+    if (s.files.length >= 51) { skipped.push(`${file.name} (${t('docker.tooMany')})`); continue; }
+    const path = file.name.replace(/[^A-Za-z0-9._\- ]/g, '_');
+    const existing = s.files.find((f, i) => i > 0 && f.path === path);
+    if (existing) existing.content = content; else s.files.push({ path, content });
+    loaded++;
+  }
+  renderAll();
+  if (loaded) notify(t('docker.opened', { n: loaded }), { kind: 'success' });
+  if (skipped.length) notify(t('docker.skipped', { list: skipped.join(', ') }), { kind: 'warn' });
+}
 function renderPlatforms() {
   $('#platforms').innerHTML = s.platforms.map((p) => `<button type="button" role="radio" aria-checked="${p === s.platform}" data-p="${p}">${p.replace('linux/', '')}</button>`).join('');
 }
@@ -102,6 +135,7 @@ function mount(el) {
     const f = s.files[+e.target.dataset.rename];
     f.path = e.target.value.trim() || f.path; f.editing = false; renderTabs();
   });
+  el.addEventListener('change', (e) => { if (e.target.id === 'openFiles') { loadFiles([...e.target.files]); e.target.value = ''; } });
   el.addEventListener('keydown', (e) => { if (e.target.matches('[data-rename]') && e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
   el.addEventListener('input', (e) => {
     if (e.target.id === 'code') { s.files[s.active].content = e.target.value; renderEditor(); }

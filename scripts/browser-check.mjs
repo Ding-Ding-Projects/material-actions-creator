@@ -148,8 +148,15 @@ try {
       $('#tab-workflows').click(); await wait(500);
       $('[data-mode="local"]').click(); await wait(900);
       const caps = document.querySelectorAll('.cap-list li').length;
-      const p = $('#wfLocalPath'); p.value = ${JSON.stringify(join(tmp, 'project'))}; p.dispatchEvent(new Event('input', { bubbles: true }));
-      $('#wfScan').click(); await wait(1200);
+      // Use the Browse… dialog: start one level up, open the project folder, choose it (which also scans).
+      const p = $('#wfLocalPath'); p.value = ${JSON.stringify(tmp)}; p.dispatchEvent(new Event('input', { bubbles: true }));
+      $('#wfBrowse').click(); await wait(900);
+      const dlg = $('dialog.folder-picker[open]'); if (!dlg) return 'no folder dialog';
+      const row = [...dlg.querySelectorAll('.fp-list button')].find((b) => b.querySelector('.fp-name').textContent === 'project'); if (!row) return 'project not listed';
+      const tagged = /1 scripts/.test(row.textContent);
+      row.click(); await wait(700);
+      dlg.querySelector('[data-fp-choose]').click(); await wait(1400);
+      if (!tagged || $('#wfLocalPath').value !== ${JSON.stringify(join(tmp, 'project'))}) return 'picker gave ' + $('#wfLocalPath').value;
       $('#wfAllScripts').click(); await wait(200);
       const o = $('#wfOutputs'); o.value = 'dist/**'; o.dispatchEvent(new Event('input', { bubbles: true })); await wait(400);
       $('#wfRun').click();
@@ -159,6 +166,32 @@ try {
       $('[data-mode="private"]').click(); await wait(300);
       return [caps, job?.mode, job?.status, text.trim(), !!job?.logUrl].join()`, (v) => v === '7,local,ready,ok,true');
   }
+  if (process.platform !== 'win32') {
+    await mkdir(join(tmp, 'project', 'docs'), { recursive: true });
+    await check('Folder picker: breadcrumbs, filter and cancel', `
+      $('#tab-workflows').click(); await wait(400); $('[data-mode="local"]').click(); await wait(700);
+      const p = $('#wfLocalPath'); p.value = ${JSON.stringify(join(tmp, 'project'))}; p.dispatchEvent(new Event('input', { bubbles: true }));
+      $('#wfBrowse').click(); await wait(900);
+      const dlg = $('dialog.folder-picker[open]'); if (!dlg) return 'no dialog';
+      const crumbs = dlg.querySelectorAll('.fp-crumbs button').length;
+      const f = dlg.querySelector('.rx-input'); f.value = 'zzz'; f.dispatchEvent(new Event('input', { bubbles: true })); await wait(300);
+      const none = dlg.querySelectorAll('.fp-list li').length; f.value = ''; f.dispatchEvent(new Event('input', { bubbles: true })); await wait(300);
+      return [crumbs > 1, none, dlg.querySelectorAll('.fp-list li').length].join()`, (v) => v === 'true,0,1');
+    await shot('06-folder-picker');
+    await check('Folder picker: Escape closes it and keeps the path', `
+      $('dialog.folder-picker').dispatchEvent(new Event('cancel', { cancelable: true })); await wait(300);
+      const kept = $('#wfLocalPath').value; $('[data-mode="private"]').click(); await wait(300);
+      return !$('dialog.folder-picker') && kept.endsWith('project')`);
+  }
+  await check('Dockerfile: Open files loads a Dockerfile and an extra file', `
+    $('#tab-dockerfile').click(); await wait(600);
+    const input = $('#openFiles'); if (!input) return 'no Open files button';
+    const dt = new DataTransfer();
+    dt.items.add(new File(['FROM scratch\\nCOPY hello.txt /\\n'], 'Dockerfile'));
+    dt.items.add(new File(['hi'], 'hello.txt'));
+    dt.items.add(new File([new Uint8Array([0, 1, 2])], 'blob.bin'));
+    input.files = dt.files; input.dispatchEvent(new Event('change', { bubbles: true })); await wait(600);
+    return [$('#code').value.startsWith('FROM scratch'), [...document.querySelectorAll('#tabs [data-i]')].length].join()`, (v) => v === 'true,2');
   await check('Recipes: save the Workflows form, set a schedule, delete', `
     localStorage.setItem('mac-wf', JSON.stringify({ repo: 'owner/repo', ref: 'main', runner: 'ubuntu-latest', mode: 'private', outputs: 'dist/**', scripts: [{ path: 'build.sh', on: true }], workflows: [] }));
     const r = await fetch('/api/recipes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Check recipe', request: { kind: 'scripts', repo: 'owner/repo', scripts: ['build.sh'], outputs: 'dist/**', runner: 'ubuntu-latest' } }) });

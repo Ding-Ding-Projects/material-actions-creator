@@ -5,10 +5,15 @@ The third run mode, **This computer**, builds without GitHub: no repository is c
 ## One click
 
 1. In **Workflows**, choose **This computer** under "Where it runs".
-2. Enter a repository, or the full path of a folder on this computer. A folder needs no sign-in.
+2. Enter a repository, or press **Browse…** to pick a folder on this computer (you can also type its full path). A folder needs no sign-in.
 3. Press **Scan**, tick scripts and workflows, and press **Run build**.
 
 The run appears in **Runs** and in the **Workspace**, where the log updates while it runs.
+
+## Picking folders and files
+
+- **Browse…** opens a folder picker. It is the app's own dialog, not the system's, because a web page is never told the full path chosen in a system dialog; the app's server lists the folders instead. Folders that hold workflows, build scripts or a Dockerfile are tagged. Choosing a folder scans it straight away.
+- On the **Dockerfile** tab, **Open files…** uses the system's file dialog to load a Dockerfile and any extra text files (512 KB each, 50 extra files).
 
 ## What runs how
 

@@ -261,6 +261,16 @@
    "page": "local",
    "expand": "fill",
    "is_interactive": true
+  },
+  "Browse.dc.html": {
+   "x": 1940,
+   "y": 0,
+   "w": 1440,
+   "h": 820,
+   "title": "Browse for a folder + Open files",
+   "page": "local",
+   "expand": "fill",
+   "is_interactive": true
   }
  },
  "order": [
@@ -283,7 +293,8 @@
   "Gallery.dc.html",
   "Recipes.dc.html",
   "Tools.dc.html",
-  "RunLocal.dc.html"
+  "RunLocal.dc.html",
+  "Browse.dc.html"
  ],
  "notes": {
   "title-workflows": {
@@ -545,7 +556,7 @@
    "y": -300,
    "text": "Run on this computer",
    "kind": "title1",
-   "maxW": 1820,
+   "maxW": 3760,
    "page": "local"
   },
   "note-RunLocal": {
@@ -553,6 +564,13 @@
    "y": 0,
    "w": 340,
    "text": "Third run mode: the workflow runs on this computer and no repository is created. Shows the mode cards, what this computer can run (runner program installed automatically with a hash check; containers or direct), per-job state with skipped Windows and macOS jobs named, and the log. Try: the big button steps ready, installing, running. Tweaks: accent, motion, stage (ready/installing/running/no-containers). Drawn before the code. Built since: src/local.js, the mode card and panel in public/js/ui/modes.js. In the app the per-job plan is shown in the preview panel and on the run card rather than as live job rows.",
+   "page": "local"
+  },
+  "note-Browse": {
+   "x": 3420,
+   "y": 0,
+   "w": 340,
+   "text": "The Browse… button beside the local folder field opens a folder picker served by the app's own server (a web page cannot read full paths from the system dialog). Breadcrumbs, a filter with the regex builder, folders tagged when they hold workflows or scripts, Choose this folder. Also the Open files… button on the Dockerfile tab. Try: click folders and crumbs, Choose, Browse again. Tweaks: accent, motion, start. Drawn before the code; built since in public/js/ui/folder-picker.js and public/js/views/dockerfile.js.",
    "page": "local"
   }
  },

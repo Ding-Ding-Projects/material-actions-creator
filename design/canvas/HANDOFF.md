@@ -59,3 +59,7 @@ Boards: `Workspace.dc.html` (Tweaks accent, motion, layout), `Gallery.dc.html` (
 ## Pass 2026-11-25 (third) — run on this computer
 
 Board `RunLocal.dc.html` (page "Run on this computer"; Tweaks accent, motion, stage), drawn before the code. Motion: capability rows rise in sequence, the download bar grows, the log cursor blinks; stilled by the motion Tweak and reduced motion. The app's capability list rises in sequence the same way (`.cap-list` in `public/css/shell.css`). Difference: the app has no live per-job rows; the plan is text in the preview panel and warnings on the run card. Frames not rendered.
+
+## Pass 2026-11-25 (fourth) — browse for a folder
+
+Board `Browse.dc.html` on the "Run on this computer" page (Tweaks accent, motion, start), drawn before the code. Motion: the dialog pops in and folder rows rise in sequence; stilled by the motion Tweak and reduced motion. The app matches it (`.fp-list` rows in `public/css/shell.css`) and adds a typed path field, Up, Home and a hidden-folders switch that the board does not show. Frames not rendered.

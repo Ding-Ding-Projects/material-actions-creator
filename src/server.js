@@ -1,9 +1,9 @@
 import http from 'node:http';
 import { execFile } from 'node:child_process';
-import { createReadStream } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 import { readFile, writeFile, rm, stat, readdir } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, extname, normalize, dirname, isAbsolute } from 'node:path';
+import { tmpdir, homedir } from 'node:os';
+import { join, extname, normalize, dirname, isAbsolute, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { timingSafeEqual, randomUUID } from 'node:crypto';
 import { GitHubClient } from './github.js';
@@ -212,6 +212,33 @@ export function createApp(opts = {}) {
     if (pathname === '/api/local/install' && req.method === 'POST') {
       await local.ensureAct();
       return json(res, 200, local.capabilities());
+    }
+    if (pathname === '/api/local/browse' && req.method === 'GET') {
+      // Folder names only, for the folder picker. A web page cannot learn full
+      // paths from the system's own dialog, so the server lists them.
+      const home = homedir();
+      const want = (url.searchParams.get('path') || '').trim() || home;
+      if (!isAbsolute(want)) throw new ValidationError('Give the full path of a folder on this computer.');
+      const folder = resolve(want);
+      let entries;
+      try { entries = await readdir(folder, { withFileTypes: true }); } catch (err) {
+        return json(res, err.code === 'ENOENT' || err.code === 'ENOTDIR' ? 404 : 403, { error: err.code === 'ENOENT' ? 'That folder was not found on this computer.' : err.code === 'ENOTDIR' ? 'That path is not a folder.' : 'This folder cannot be opened.' });
+      }
+      const showHidden = url.searchParams.get('hidden') === '1';
+      const names = entries.filter((e) => e.isDirectory() && (showHidden || !e.name.startsWith('.'))).map((e) => e.name).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+      const folders = [];
+      for (const name of names.slice(0, 500)) {
+        // A cheap hint for which folders look like projects.
+        let inside = [];
+        try { inside = await readdir(join(folder, name)); } catch { /* unreadable: still listed */ }
+        const scripts = inside.filter((n) => /\.(bat|cmd|ps1|sh)$/i.test(n)).length;
+        let workflows = 0;
+        if (inside.includes('.github')) { try { workflows = (await readdir(join(folder, name, '.github', 'workflows'))).filter((n) => /\.ya?ml$/.test(n)).length; } catch { /* none */ } }
+        folders.push({ name, path: join(folder, name), scripts, workflows, dockerfile: inside.includes('Dockerfile') });
+      }
+      const parent = dirname(folder);
+      const roots = process.platform === 'win32' ? 'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((d) => `${d}:\\`).filter((d) => existsSync(d)) : ['/'];
+      return json(res, 200, { path: folder, parent: parent === folder ? null : parent, home, roots, separator: sep, folders, truncated: names.length > 500 });
     }
     if (pathname === '/api/local/scan' && req.method === 'GET') {
       const folder = (url.searchParams.get('path') || '').trim();

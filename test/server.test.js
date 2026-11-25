@@ -211,6 +211,20 @@ test('local API: capabilities, folder scan, and a local build with no sign-in', 
   assert.equal(scan.workflows[0].path, '.github/workflows/ci.yml');
   if (process.platform !== 'win32') assert.match(scan.workflows[0].warnings[0], /Windows jobs need a Windows computer/);
   assert.equal((await call('/api/local/scan?path=relative')).status, 400);
+  // The folder picker lists folders only, with hints, and hides dot-folders by default.
+  const parent = join(project, '..');
+  const here = await (await call(`/api/local/browse?path=${encodeURIComponent(project)}`)).json();
+  assert.deepEqual(here.folders.map((f) => f.name), ['node_modules']);
+  assert.ok(here.parent && here.home && here.separator);
+  assert.deepEqual((await (await call(`/api/local/browse?path=${encodeURIComponent(project)}&hidden=1`)).json()).folders.map((f) => f.name), ['.github', 'node_modules']);
+  const up = await (await call(`/api/local/browse?path=${encodeURIComponent(parent)}`)).json();
+  const me = up.folders.find((f) => f.path === project);
+  assert.deepEqual([me.scripts, me.workflows, me.dockerfile], [1, 1, false]);
+  assert.equal((await call('/api/local/browse?path=relative')).status, 400);
+  assert.equal((await call(`/api/local/browse?path=${encodeURIComponent(join(project, 'nope'))}`)).status, 404);
+  assert.equal((await call(`/api/local/browse?path=${encodeURIComponent(join(project, 'build.sh'))}`)).status, 404);
+  assert.equal((await (await call('/api/local/browse')).json()).path, here.home);
+  assert.equal((await fetch(base + '/api/local/browse')).status, 401);
   assert.equal((await call(`/api/local/scan?path=${encodeURIComponent(join(project, 'nope'))}`)).status, 404);
   const created = await (await call('/api/builds', { method: 'POST', body: { kind: 'scripts', mode: 'local', localPath: project, scripts: ['build.sh'], outputs: 'dist/**' } })).json();
   assert.equal(created.mode, 'local');

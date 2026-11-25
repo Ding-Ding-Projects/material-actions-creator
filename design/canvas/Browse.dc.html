@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Browse for a folder</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#d4ff3a}a:hover{color:#eaff8f}
+@keyframes macpulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes macrise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes macflow{from{background-position:0% 50%}to{background-position:200% 50%}}
+@keyframes macorb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,-40px) scale(1.18)}}
+@keyframes macorb2{0%,100%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-70px,50px) scale(.9)}}
+.mac-orb{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:-1}
+[data-motion="on"] .mac-orb{animation:macorb 14s ease-in-out infinite}
+[data-motion="on"] .mac-orb + .mac-orb{animation:macorb2 18s ease-in-out infinite}
+[data-motion="on"] section,[data-motion="on"] article,[data-motion="on"] aside,[data-motion="on"] [role="dialog"]{animation:macrise .8s cubic-bezier(.2,.9,.1,1) both}
+[data-motion="on"] section:nth-of-type(2),[data-motion="on"] article:nth-of-type(2),[data-motion="on"] aside{animation-delay:.12s}
+[data-motion="on"] article:nth-of-type(3){animation-delay:.24s}
+[data-motion="on"] button,[data-motion="on"] a,[data-motion="on"] label{transition:transform .3s cubic-bezier(.2,.9,.1,1),filter .25s,background .25s,border-color .25s,box-shadow .3s}
+[data-motion="on"] button:hover,[data-motion="on"] a:hover{transform:translateY(-2px);filter:brightness(1.08)}
+[data-motion="off"] *,[data-motion="off"] *::before,[data-motion="off"] *::after{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+@keyframes macpop{from{opacity:0;transform:scale(.9) translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes macink{from{transform:scaleX(.15)}to{transform:none}}
+@keyframes macgrow{from{transform:scaleX(0)}to{transform:none}}
+@keyframes macburst{from{opacity:1;transform:rotate(var(--a)) translateY(0)}to{opacity:0;transform:rotate(var(--a)) translateY(-260px) rotate(220deg)}}
+@keyframes maclevel{0%{opacity:0;transform:scale(.4) rotate(-6deg)}20%{opacity:1;transform:scale(1.08) rotate(2deg)}32%{transform:none}100%{opacity:1}}
+@keyframes macring{0%,100%{box-shadow:0 0 0 4px var(--acc),0 0 0 9999px rgba(5,6,9,.5)}50%{box-shadow:0 0 0 8px var(--acc),0 0 0 9999px rgba(5,6,9,.5)}}
+@keyframes macdash{to{stroke-dashoffset:-24}}
+[data-motion="on"] .mac-pop{animation:macpop .45s cubic-bezier(.34,1.56,.64,1) both}
+[data-motion="on"] .mac-ink{animation:macink .5s cubic-bezier(.34,1.56,.64,1) both;transform-origin:center}
+[data-motion="on"] .mac-grow{animation:macgrow 1.1s cubic-bezier(.2,.9,.1,1) both;transform-origin:left}
+[data-motion="on"] .mac-burst i{animation:macburst 1.6s cubic-bezier(.2,.9,.1,1) infinite}
+[data-motion="on"] .mac-level{animation:maclevel 1.2s cubic-bezier(.34,1.56,.64,1) both}
+[data-motion="on"] .mac-ring{animation:macring 1.6s ease-in-out infinite}
+[data-motion="on"] .mac-dash{animation:macdash 1s linear infinite}
+[data-motion="on"] li{animation:macrise .6s cubic-bezier(.2,.9,.1,1) both}
+</style>
+</helmet>
+<div data-motion="{{motionFlag}}" style="--acc: {{accent}}; isolation: isolate; width: 1440px; height: 820px; box-sizing: border-box; background: #0b0c10; color: #eef0f6; font-family: 'Bricolage Grotesque', system-ui, sans-serif; position: relative; overflow: hidden">
+<div class="mac-orb" aria-hidden="true" style="width: 560px; height: 560px; left: -180px; top: -220px; background: {{accent}}; opacity: .14"></div><div class="mac-orb" aria-hidden="true" style="width: 480px; height: 480px; right: -160px; top: 120px; background: #b69cff; opacity: .16"></div>
+
+<div style="padding: 44px 56px; display: grid; grid-template-columns: 1fr 640px; gap: 36px; height: 100%; box-sizing: border-box">
+  <section style="display: grid; gap: 16px; align-content: start">
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #8d93a8; margin: 0 0 10px">01 · Source · This computer</p>
+    <h2 style="font-size: 46px; letter-spacing: -.04em; line-height: .95; margin: 0">Point at it. <span style="color: {{accent}}">Don't type it.</span></h2>
+    <div style="background: #12141b; border: 1px solid #2c3140; border-radius: 22px; padding: 18px; display: grid; gap: 10px">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8d93a8">Or a folder on this computer</div>
+      <div style="display: flex; gap: 8px"><div style="flex: 1; min-height: 48px; display: flex; align-items: center; padding: 0 14px; border-radius: 14px; border: 1px solid #2c3140; background: #0b0c10; font-family: 'JetBrains Mono', monospace; font-size: 14px">{{chosen}}</div><button type="button" onClick="{{open}}" style="min-height: 48px; padding: 0 18px; border-radius: 14px; border: 1px solid {{accent}}; background: #191c25; color: #eef0f6; font: 700 15px 'Bricolage Grotesque', sans-serif">📂 Browse…</button></div>
+    </div>
+    <div style="background: #12141b; border: 1px solid #2c3140; border-radius: 22px; padding: 18px; display: grid; gap: 10px">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8d93a8">Dockerfile tab</div>
+      <div style="display: flex; gap: 8px; align-items: center"><span style="padding: 12px 18px; border-radius: 14px; border: 1px solid #2c3140; background: #191c25; font-weight: 700">📄 Open files…</span><span style="color: #a7adc0; font-size: 14px">Dockerfile fills the editor; other files become extra files.</span></div>
+    </div>
+  </section>
+  <div role="dialog" aria-label="Choose a folder" class="mac-pop" style="display: {{dlg}}; background: #12141b; border: 1px solid #2c3140; border-radius: 22px; border-radius: 28px; padding: 22px; align-self: start; box-shadow: 0 40px 120px rgba(0,0,0,.6); gap: 12px; flex-direction: column">
+    <div style="display: flex; align-items: center; gap: 8px"><strong style="font-size: 22px">Choose a folder</strong><span style="margin-left: auto; color: #8d93a8">×</span></div>
+    <div style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 13px"><sc-for list="{{crumbs}}" as="c" hint-placeholder-count="4"><button type="button" onClick="{{c.go}}" style="min-height: 36px; padding: 0 10px; border: 0; border-radius: 10px; background: {{c.bg}}; color: #eef0f6; font: inherit">{{c.name}}</button><span style="color: #8d93a8">/</span></sc-for></div>
+    <div style="display: flex; gap: 6px"><div style="flex: 1; min-height: 44px; display: flex; align-items: center; padding: 0 12px; border: 1px solid #2c3140; border-radius: 12px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #8d93a8">⌕ Filter folders</div><span style="display: grid; place-items: center; min-width: 44px; border: 1px solid #2c3140; border-radius: 12px; font-family: 'JetBrains Mono', monospace; color: #8d93a8">.*</span></div>
+    <ul style="list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; min-height: 250px; align-content: start"><sc-for list="{{rows}}" as="r" hint-placeholder-count="5"><li style="animation-delay: {{r.delay}}"><button type="button" onClick="{{r.go}}" style="width: 100%; min-height: 46px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border: 0; border-radius: 12px; background: #191c25; color: #eef0f6; font: 600 15px 'Bricolage Grotesque', sans-serif; text-align: left">📁 {{r.name}}<span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{accent}}">{{r.tag}}</span><span style="color: #8d93a8">›</span></button></li></sc-for></ul>
+    <div style="font-size: 13px; color: #8d93a8; display: {{emptyDisplay}}">No folders inside this one.</div>
+    <div style="display: flex; gap: 10px; align-items: center"><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8d93a8; flex: 1; overflow-wrap: anywhere">{{path}}</span><button type="button" onClick="{{choose}}" style="min-height: 50px; padding: 0 22px; border: 0; border-radius: 20px; background: {{accent}}; color: #141a00; font: 800 16px 'Bricolage Grotesque', sans-serif">Choose this folder</button></div>
+  </div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent": {"editor": "color", "default": "#d4ff3a", "options": ["#d4ff3a", "#7cf5c8", "#b69cff", "#ff9e7a"], "section": "Look"}, "motion": {"editor": "boolean", "default": true, "section": "Look"}, "start": {"editor": "select", "section": "Stage", "default": "/home/you/projects", "options": ["/home/you", "/home/you/projects", "/home/you/projects/map-editor"]}, "$preview": {"width": 1440, "height": 820}}'>
+class Component extends DCLogic {
+
+  constructor(p) { super(p); this.state = { path: null, open: null, chosen: null }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#d4ff3a';
+    const motion = this.props.motion ?? true;
+    const T = { '/home/you': [['projects', ''], ['Downloads', ''], ['Documents', '']], '/home/you/projects': [['map-editor', 'workflows · 3 scripts'], ['material-actions-creator', 'workflows · 5 scripts'], ['notes', '']], '/home/you/projects/map-editor': [['build', '2 scripts'], ['src', ''], ['dist', '']] };
+    const path = this.state.path ?? (this.props.start ?? '/home/you/projects');
+    const open = this.state.open ?? true;
+    const parts = path.split('/').filter(Boolean);
+    const crumbs = parts.map((name, i) => { const to = '/' + parts.slice(0, i + 1).join('/'); return { name, bg: i === parts.length - 1 ? '#232733' : 'transparent', go: () => this.setState({ path: T[to] ? to : path }) }; });
+    const rows = (T[path] || []).map(([name, tag], i) => ({ name, tag, delay: i * 50 + 'ms', go: () => this.setState({ path: T[path + '/' + name] ? path + '/' + name : path }) }));
+    return { accent, motionFlag: motion ? 'on' : 'off', crumbs, rows, path, dlg: open ? 'flex' : 'none', emptyDisplay: rows.length ? 'none' : 'block', chosen: this.state.chosen || '/home/you/project',
+      open: () => this.setState({ open: true }), choose: () => this.setState({ open: false, chosen: path }) };
+  }
+}
+</script>
+</body>
+</html>

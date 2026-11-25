@@ -6,6 +6,7 @@ import { t, h, v, esc } from '../core/i18n.js';
 import { notify } from '../core/feedback.js';
 import { localPanel, modeCards } from '../ui/modes.js';
 import { requireSignIn } from '../ui/auth.js';
+import '../ui/folder-picker.js';
 
 const saved = (() => { try { return JSON.parse(localStorage.getItem('mac-wf')) || {}; } catch { return {}; } })();
 const wf = {
@@ -151,7 +152,7 @@ function mount(el) {
           <label class="field"><span>${h('wf.ref')}</span><input id="wfRef" spellcheck="false" autocomplete="off"></label>
           <button class="btn scan" type="button" id="wfScan">${h('wf.scan')}</button>
         </div>
-        <div id="wfLocalRow" hidden><label class="field"><span>${h('wf.localPath')}</span><input id="wfLocalPath" placeholder="/home/you/project" spellcheck="false" autocomplete="off"></label><p class="muted small">${h('wf.localPathWhy')}</p></div>
+        <div id="wfLocalRow" hidden><label class="field"><span>${h('wf.localPath')}</span><span class="path-row"><input id="wfLocalPath" placeholder="/home/you/project" spellcheck="false" autocomplete="off"><button type="button" class="btn" id="wfBrowse" data-ui="wf-browse">📂 ${h('fp.browse')}</button></span></label><p class="muted small">${h('wf.localPathWhy')}</p></div>
       </div>
       <div class="panel" data-ui="wf-scripts">
         <div class="panel-head"><p class="step">${h('wf.scripts')}</p><span class="muted small" id="wfScriptHint">${h('wf.scriptsHint')}</span></div>
@@ -183,6 +184,13 @@ function mount(el) {
   $('#wfLocalPath').addEventListener('input', (e) => { wf.localPath = e.target.value.trim(); save(); schedule(); });
   for (const [sel, k] of [['#wfRepo', 'repo'], ['#wfRef', 'ref'], ['#wfOutputs', 'outputs']]) $(sel).addEventListener('input', (e) => { wf[k] = e.target.value; save(); schedule(); });
   el.addEventListener('click', async (e) => {
+    if (e.target.closest('#wfBrowse')) {
+      e.preventDefault();
+      const { pickFolder } = await import('../ui/folder-picker.js');
+      const chosen = await pickFolder($('#wfLocalPath').value.trim());
+      if (chosen) { wf.localPath = chosen; $('#wfLocalPath').value = chosen; save(); scan(); }
+      return;
+    }
     if (e.target.closest('#wfLint')) {
       const { lintWorkflow, lintHtml } = await import('./extensions.js');
       $('#wfLintOut').innerHTML = lintHtml(await lintWorkflow($('#wfYaml').dataset.yaml));
