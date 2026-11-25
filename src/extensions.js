@@ -280,12 +280,18 @@ export class ExtensionHost extends EventEmitter {
     this.emit('change');
   }
 
-  async save() {
-    if (!this.stateFile) return;
-    await mkdir(dirname(this.stateFile), { recursive: true });
-    const tmp = `${this.stateFile}.tmp`;
-    await writeFile(tmp, JSON.stringify(this.state, null, 1));
-    await rename(tmp, this.stateFile);
+  // Saves are queued: two overlapping writes would fight over the same
+  // temporary file and one of them would fail.
+  save() {
+    if (!this.stateFile) return Promise.resolve();
+    const write = async () => {
+      await mkdir(dirname(this.stateFile), { recursive: true });
+      const tmp = `${this.stateFile}.tmp`;
+      await writeFile(tmp, JSON.stringify(this.state, null, 1));
+      await rename(tmp, this.stateFile);
+    };
+    this.saving = (this.saving || Promise.resolve()).then(write, write);
+    return this.saving;
   }
 
   pendingPermissions(id) {

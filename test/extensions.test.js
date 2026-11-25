@@ -297,3 +297,10 @@ test('when a sandbox is available it really hides the home folder and the networ
   assert.match(seen.sys, /^ERR:/, 'system is read-only');
   assert.match(seen.net, /^ERR:/, 'no network without the permission');
 });
+
+test('overlapping state saves do not fail', async () => {
+  const { h, root } = await host(async ({ user }) => makeExt(user, base, `${READ}console.log(JSON.stringify({ok:true,result:{}}))`));
+  await h.configure('demo', { grant: [], enabled: true });
+  await Promise.all([...Array.from({ length: 8 }, () => h.save()), h.run('demo', 'command'), h.configure('demo', { enabled: false })]);
+  assert.equal(JSON.parse(await readFile(join(root, 'data', 'extensions.json'), 'utf8')).demo.enabled, false);
+});

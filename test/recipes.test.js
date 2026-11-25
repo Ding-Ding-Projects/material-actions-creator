@@ -77,3 +77,12 @@ test('a scheduled run that cannot start is recorded and tried again next time', 
   assert.ok(b.get('Broken').nextAt > 0);
   await assert.rejects(b.run('Broken'), /Not signed in/);
 });
+
+test('overlapping saves all land', async () => {
+  const { b, dir } = await book();
+  await Promise.all(Array.from({ length: 12 }, (_, i) => b.save({ name: `Recipe ${i}`, request })));
+  await Promise.all(b.list().map((r) => b.noteBuild({ id: 'none', status: 'ready' }).then(() => b.save({ id: r.id, name: `${r.name}!` }))));
+  const onDisk = JSON.parse(await readFile(join(dir, 'recipes.json'), 'utf8')).recipes;
+  assert.equal(onDisk.length, 12);
+  assert.ok(onDisk.every((r) => r.name.endsWith('!')));
+});

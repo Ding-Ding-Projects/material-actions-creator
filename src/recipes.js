@@ -51,12 +51,16 @@ export class RecipeBook extends EventEmitter {
     return this;
   }
 
-  async persist() {
-    await mkdir(dirname(this.file), { recursive: true });
-    const tmp = `${this.file}.tmp`;
-    await writeFile(tmp, JSON.stringify({ version: 1, recipes: this.recipes }, null, 1));
-    await rename(tmp, this.file);
-    this.emit('change');
+  // Writes are queued so overlapping saves cannot fight over the temporary file.
+  persist() {
+    const write = async () => {
+      await mkdir(dirname(this.file), { recursive: true });
+      const tmp = `${this.file}.tmp`;
+      await writeFile(tmp, JSON.stringify({ version: 1, recipes: this.recipes }, null, 1));
+      await rename(tmp, this.file);
+    };
+    this.saving = (this.saving || Promise.resolve()).then(write, write);
+    return this.saving.then(() => { this.emit('change'); });
   }
 
   list() { return this.recipes.map((r) => ({ ...r })); }
