@@ -77,6 +77,8 @@ checks() {
   command -v python3 >/dev/null 2>&1 && langs="$langs, python3"
   command -v sh >/dev/null 2>&1 && langs="$langs, sh"
   ok "Extensions" "$n built in · can run: $langs"
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then ok "Local runs" "Linux jobs in Docker containers"
+  else warn "Local runs" "no Docker: Linux jobs run directly on this computer"; fi
   if [ "$1" = "port" ]; then
     if port_free "$PORT"; then ok "Port" "$PORT is free on $HOST"; else bad "Port" "$PORT is already in use on $HOST (try --port)"; fi
   fi

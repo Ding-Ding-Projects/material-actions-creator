@@ -121,6 +121,16 @@ An extension is a folder with a `manifest.json` and a program in any language. T
 
 On Linux with bubblewrap installed, extensions run sandboxed (read-only system, no home folder, no app data, no network unless allowed). Elsewhere permissions only decide what the app hands over, so only add extensions you trust.
 
+## Run on this computer
+
+Choose **This computer** as the run mode and nothing goes to GitHub: build scripts run with the host's shell, a repository's workflows run through [act](https://github.com/nektos/act) (downloaded on first use at a pinned version and hash-checked), and Dockerfiles use the local Docker. A local folder can be built without signing in.
+
+```sh
+mac build ./my-project --local --all-workflows
+```
+
+Linux jobs run in Docker containers, or directly on a Linux computer when there is no Docker. Windows jobs only run on Windows and macOS jobs only on a Mac; jobs that cannot run are listed by name with the reason. See **Docs → Running on this computer**.
+
 ## Workspace and recipes
 
 The **Workspace** tab has dockable panels for runs, the step log, a timing chart, outputs and extension results. **Recipes** save the Workflows form so a build can be run again with one click, on a schedule, or with `mac recipe run <name>`.

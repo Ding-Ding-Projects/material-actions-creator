@@ -362,6 +362,10 @@ export const STRINGS = {
   'menu.unlock': { en: 'Unlock this element', yue: '解鎖呢個元素' },
   'wf.previewEmpty': { en: 'Pick a repository and at least one script or workflow to see the generated workflow.', yue: '揀一個儲存庫同最少一個腳本或者工作流程，就會見到生成嘅工作流程。' },
   'runs.openWorkspace': { en: 'Log and timing', yue: '記錄同時間' },
+  'wf.localPath': { en: 'Or a folder on this computer (full path)', yue: '或者呢部電腦上面嘅資料夾（完整路徑）' },
+  'wf.localPathWhy': { en: 'Leave empty to fetch the repository above. A folder is copied to a working folder first, so the original is not changed, and no sign-in is needed.', yue: '留空就會攞上面個儲存庫。資料夾會先抄去工作資料夾，原本嗰個唔會改到，亦唔使登入。' },
+  'wf.localPlan': { en: 'Runs on this computer. Nothing is generated or uploaded.', yue: '喺呢部電腦行。唔會生成或者上載任何嘢。' },
+  'toast.localQueued': { en: 'Running on this computer. Follow it in Runs.', yue: '喺呢部電腦行緊，可以喺「執行」跟進。' },
   'menu.unlockAll': { en: 'Unlock every element', yue: '解鎖所有元素' },
   'menu.locked': { en: 'This element is locked. Unlock it from its context menu.', yue: '呢個元素鎖咗，喺右擊選單解鎖。' },
 

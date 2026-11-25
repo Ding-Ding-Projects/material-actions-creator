@@ -117,10 +117,17 @@ function drawLog(el, ctx) {
       return `<span class="${cls}">${esc(l.replace(/##\[(group|error|warning|command|section)\]/, cls === 'grp' ? '▸ ' : ''))}</span>`;
     }).join('\n')}</pre>`;
   };
-  if (logCache.has(b.id)) { show(logCache.get(b.id)); return; }
-  body.innerHTML = `<p class="muted">${h('common.loading')}</p>`;
-  fetch(withKey(b.logUrl)).then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status))))).then((text) => { logCache.set(b.id, text); if (current()?.id === b.id) show(text); })
-    .catch(() => { body.innerHTML = `<p class="run-error">${h('ws.log.failed')}</p>`; });
+  // A local run's log grows while it runs: refetch when its size changes and
+  // keep showing the last text meanwhile.
+  const size = b.log?.size ?? 0;
+  const cached = logCache.get(b.id);
+  const paint = (text) => { show(text); if (b.log?.live) body.scrollTop = body.scrollHeight; };
+  if (cached) paint(cached.text); else body.innerHTML = `<p class="muted">${h('common.loading')}</p>`;
+  if (cached?.size === size || ctx.fetching === `${b.id}:${size}`) return;
+  ctx.fetching = `${b.id}:${size}`;
+  fetch(withKey(b.logUrl)).then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status))))).then((text) => { logCache.set(b.id, { size, text }); if (current()?.id === b.id) paint(text); })
+    .catch(() => { if (!cached) body.innerHTML = `<p class="run-error">${h('ws.log.failed')}</p>`; })
+    .finally(() => { ctx.fetching = null; });
 }
 function setupLog(el) {
   const ctx = { matcher: () => true, times: false };

@@ -11,6 +11,11 @@
       "file": "run-modes.md"
     },
     {
+      "id": "local",
+      "title": "Running on this computer",
+      "file": "local.md"
+    },
+    {
       "id": "workflows",
       "title": "Workflows and scripts",
       "file": "workflows.md"

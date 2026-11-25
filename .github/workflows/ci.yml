@@ -36,7 +36,7 @@ jobs:
   linux:
     name: Linux launcher, self-test and browser check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -75,6 +75,10 @@ jobs:
           # Ubuntu 24.04 blocks unprivileged user namespaces by default.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
           MAC_REQUIRE_SANDBOX_TEST=1 node --test test/extensions.test.js
+      - name: Local runs for real, in containers (downloads the pinned runner program)
+        run: node scripts/local-check.mjs
+      - name: Local runs for real, directly on the host
+        run: MAC_LOCAL_CONTAINERS=off node scripts/local-check.mjs
       - name: Browser check in headless Chrome
         run: node scripts/browser-check.mjs --shots shots
       - uses: actions/upload-artifact@v4

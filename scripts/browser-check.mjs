@@ -141,6 +141,24 @@ try {
       $('[data-ext="hello-shell"] [data-ext-run]').requestSubmit(); await wait(1500);
       return $('[data-ext="hello-shell"] .ext-summary')?.textContent || ''`, (v) => /Extension id: hello-shell/.test(v));
   }
+  if (process.platform !== 'win32') {
+    await mkdir(join(tmp, 'project'), { recursive: true });
+    await writeFile(join(tmp, 'project', 'build.sh'), 'mkdir -p dist\necho building\necho ok > dist/out.txt\n');
+    await check('Local run: pick This computer, scan a folder, build, download', `
+      $('#tab-workflows').click(); await wait(500);
+      $('[data-mode="local"]').click(); await wait(900);
+      const caps = document.querySelectorAll('.cap-list li').length;
+      const p = $('#wfLocalPath'); p.value = ${JSON.stringify(join(tmp, 'project'))}; p.dispatchEvent(new Event('input', { bubbles: true }));
+      $('#wfScan').click(); await wait(1200);
+      $('#wfAllScripts').click(); await wait(200);
+      const o = $('#wfOutputs'); o.value = 'dist/**'; o.dispatchEvent(new Event('input', { bubbles: true })); await wait(400);
+      $('#wfRun').click();
+      let job;
+      for (let i = 0; i < 60; i++) { await wait(250); job = (await (await fetch('/api/builds')).json())[0]; if (job && job.status !== 'running') break; }
+      const text = job?.outputs?.[0] ? await (await fetch(job.outputs[0].url)).text() : '';
+      $('[data-mode="private"]').click(); await wait(300);
+      return [caps, job?.mode, job?.status, text.trim(), !!job?.logUrl].join()`, (v) => v === '7,local,ready,ok,true');
+  }
   await check('Recipes: save the Workflows form, set a schedule, delete', `
     localStorage.setItem('mac-wf', JSON.stringify({ repo: 'owner/repo', ref: 'main', runner: 'ubuntu-latest', mode: 'private', outputs: 'dist/**', scripts: [{ path: 'build.sh', on: true }], workflows: [] }));
     const r = await fetch('/api/recipes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Check recipe', request: { kind: 'scripts', repo: 'owner/repo', scripts: ['build.sh'], outputs: 'dist/**', runner: 'ubuntu-latest' } }) });
@@ -157,6 +175,7 @@ try {
       { name: 'Set up job', status: 'completed', conclusion: 'success', startedAt: now - 50000, completedAt: now - 47000 },
       { name: 'Run build.sh', status: 'in_progress', conclusion: null, startedAt: now - 47000, completedAt: null }] });
     $('#tab-workspace').click(); await wait(2500);
+    $('[data-run="check1"]').click(); await wait(400);
     const panels = document.querySelectorAll('.ws-panel').length; const bars = document.querySelectorAll('.ws-bar-row').length;
     const saved = !!JSON.parse(localStorage.getItem('mac.workspace.v1') || 'null')?.panels;
     runs.removeBuild('check1');

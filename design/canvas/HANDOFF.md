@@ -55,3 +55,7 @@ Boards drawn before the code this time: `Extensions.dc.html` (page "Extensions �
 ## Pass 2026-11-25 (second) — workspace, gallery, recipes, tools
 
 Boards: `Workspace.dc.html` (Tweaks accent, motion, layout), `Gallery.dc.html` (accent, motion, isolation), `Recipes.dc.html` (accent, motion, stage), `Tools.dc.html` (accent, motion, tool). The first three were drawn before the code; the Tools board records a tab that had already shipped. Motion: Workspace — timing bars grow from the left, blinking log cursor; Gallery — cards rise in sequence, the run action pops in; Recipes — cards rise in sequence; Tools — the panel pops in on each switch and the arrow's dashes flow. All stilled by the motion Tweak and reduced motion. The app carries matching motion in `public/css/shell.css` (growing and striped timing bars, rising cards, drop-area lift). Frames of the canvas boards were not rendered; the app is screenshotted by `scripts/browser-check.mjs` into `docs/screenshots/`.
+
+## Pass 2026-11-25 (third) — run on this computer
+
+Board `RunLocal.dc.html` (page "Run on this computer"; Tweaks accent, motion, stage), drawn before the code. Motion: capability rows rise in sequence, the download bar grows, the log cursor blinks; stilled by the motion Tweak and reduced motion. The app's capability list rises in sequence the same way (`.cap-list` in `public/css/shell.css`). Difference: the app has no live per-job rows; the plan is text in the preview panel and warnings on the run card. Frames not rendered.

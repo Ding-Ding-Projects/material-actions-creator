@@ -65,6 +65,10 @@
   {
    "id": "tools",
    "name": "Tools — Base64, converter, JSON studio"
+  },
+  {
+   "id": "local",
+   "name": "Run on this computer"
   }
  ],
  "boards": {
@@ -247,6 +251,16 @@
    "page": "tools",
    "expand": "fill",
    "is_interactive": true
+  },
+  "RunLocal.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 880,
+   "title": "Run on this computer — one click",
+   "page": "local",
+   "expand": "fill",
+   "is_interactive": true
   }
  },
  "order": [
@@ -268,7 +282,8 @@
   "Workspace.dc.html",
   "Gallery.dc.html",
   "Recipes.dc.html",
-  "Tools.dc.html"
+  "Tools.dc.html",
+  "RunLocal.dc.html"
  ],
  "notes": {
   "title-workflows": {
@@ -524,6 +539,21 @@
    "w": 340,
    "text": "The Tools tab: Base64, converter and JSON studio as input to output, with the notes the app shows (lossy flattening; built-in generator, not quicktype). Try: the three tabs. Tweaks: accent, motion, tool. This board was drawn after the code shipped. The real screens have more controls (files, images, tree editor).",
    "page": "tools"
+  },
+  "title-local": {
+   "x": 0,
+   "y": -300,
+   "text": "Run on this computer",
+   "kind": "title1",
+   "maxW": 1820,
+   "page": "local"
+  },
+  "note-RunLocal": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "Third run mode: the workflow runs on this computer and no repository is created. Shows the mode cards, what this computer can run (runner program installed automatically with a hash check; containers or direct), per-job state with skipped Windows and macOS jobs named, and the log. Try: the big button steps ready, installing, running. Tweaks: accent, motion, stage (ready/installing/running/no-containers). Drawn before the code. Built since: src/local.js, the mode card and panel in public/js/ui/modes.js. In the app the per-job plan is shown in the preview panel and on the run card rather than as live job rows.",
+   "page": "local"
   }
  },
  "designSystems": []

@@ -696,7 +696,7 @@
    "id": "fresh-build-run-command",
    "title": "One build-and-run command",
    "status": "partial",
-   "note": "scripts/run-linux.sh on Linux and docker run elsewhere; no Windows one-liner.",
+   "note": "scripts/run-linux.sh or a Linux package; no Windows one-liner.",
    "proof": "scripts/run-linux.sh"
   },
   {
@@ -710,8 +710,9 @@
    "area": "Build and install",
    "id": "dependency-fetcher",
    "title": "One-click dependency fetcher",
-   "status": "missing",
-   "note": "Not built."
+   "status": "partial",
+   "note": "The app fetches its own local runner program, pinned and hash-checked, and the Linux launcher installs dependencies; no standalone one-click fetcher script.",
+   "proof": "src/local.js"
   },
   {
    "area": "Build and install",
@@ -802,7 +803,7 @@
    "id": "runner-selection",
    "title": "Live runner selection",
    "status": "partial",
-   "note": "Runner picker in the app; CI runners are fixed.",
+   "note": "Runner picker in the app, plus running on this computer; CI runners are fixed.",
    "proof": "public/js/views/workflows.js"
   },
   {

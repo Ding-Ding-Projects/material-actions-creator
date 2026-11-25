@@ -430,3 +430,19 @@ pre.ext-summary { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; fon
 .rec-status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex: none; }
 .rec-status.good .dot { background: var(--mint); } .rec-status.bad .dot { background: var(--coral); }
 .rec-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+/* Local runs */
+.modes.three { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+.mode.local[aria-pressed="true"] { border-color: var(--mint); background: color-mix(in srgb, var(--mint) 8%, transparent); }
+.mode.local .mode-title svg { color: var(--mint); }
+.cap-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.cap-list li { display: flex; gap: 12px; align-items: center; animation: rise .4s var(--ease) both; }
+.cap-list li:nth-child(2) { animation-delay: 50ms; } .cap-list li:nth-child(3) { animation-delay: 100ms; } .cap-list li:nth-child(4) { animation-delay: 150ms; } .cap-list li:nth-child(5) { animation-delay: 200ms; } .cap-list li:nth-child(6) { animation-delay: 250ms; } .cap-list li:nth-child(7) { animation-delay: 300ms; }
+.cap-list li > div { flex: 1; min-width: 0; }
+.cap-list p { margin: 0; }
+.cap-mark { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 800 13px var(--mono); font-style: normal; background: var(--ink-3); color: var(--muted); }
+.cap-list .ok .cap-mark { background: color-mix(in srgb, var(--mint) 20%, transparent); color: var(--mint); }
+.cap-list .warn .cap-mark { background: color-mix(in srgb, var(--amber) 22%, transparent); color: var(--amber); }
+#wfLocalRow { margin-top: 12px; display: grid; gap: 6px; }
+#wfLocalRow input { width: 100%; }
+.is-local [data-ui="wf-runner"] { opacity: .45; }

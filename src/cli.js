@@ -38,6 +38,7 @@ Build a repository
       --runner <label>             Default: windows-latest
       --outputs <globs>            Output globs for scripts, e.g. "dist/**/*.exe"
       --encrypted                  Encrypted public builder (default: private temp repo)
+      --local                      Run on this computer; the repository may be a folder path
       --name <title>
   mac preview <owner/repo> [same options]    Print the generated workflow, do nothing
 
@@ -50,6 +51,8 @@ Runs
   mac watch <id>                   Follow a build (resumes it if the engine had stopped)
   mac download <id> [--out dir]    Save every output (decrypted)
   mac rm <id>                      Dismiss a finished build and delete its files
+  mac local                        What this computer can run locally
+  mac local install                Download the pinned local runner program now
   mac recipes                      List saved recipes
   mac recipe save <name> owner/repo [build options] [--every <hours> | --daily HH:MM]
   mac recipe run <name>            Start a recipe and follow it
@@ -73,7 +76,7 @@ const OPTIONS = {
   server: { type: 'string' }, key: { type: 'string' }, owner: { type: 'string' }, every: { type: 'string' }, daily: { type: 'string' },
   ref: { type: 'string' }, script: { type: 'string', multiple: true }, 'all-scripts': { type: 'boolean' },
   workflow: { type: 'string', multiple: true }, 'all-workflows': { type: 'boolean' },
-  runner: { type: 'string' }, outputs: { type: 'string' }, encrypted: { type: 'boolean' }, name: { type: 'string' },
+  runner: { type: 'string' }, outputs: { type: 'string' }, encrypted: { type: 'boolean' }, local: { type: 'boolean' }, name: { type: 'string' },
   dockerfile: { type: 'string', short: 'f' }, file: { type: 'string', multiple: true }, image: { type: 'string' },
   platform: { type: 'string' }, 'build-arg': { type: 'string', multiple: true },
   out: { type: 'string', short: 'o' }, detach: { type: 'boolean' }, json: { type: 'boolean' },
@@ -147,7 +150,7 @@ const STATUS = { running: violet, ready: lime, failed: coral, expired: dim };
 
 function printJob(job) {
   console.log(`${bold(job.title || job.imageName)}  ${(STATUS[job.status] || ((s) => s))(job.status.toUpperCase())}  ${dim(job.id)}`);
-  console.log(dim(`  ${job.subtitle || ''}${job.mode === 'encrypted-public' ? ' · encrypted public' : ' · private'}`));
+  console.log(dim(`  ${job.subtitle || ''}${job.mode === 'encrypted-public' ? ' · encrypted public' : job.mode === 'local' ? ' · this computer' : ' · private'}`));
 }
 
 function stageLine(s) {
@@ -214,27 +217,32 @@ function buildArgsFrom(list = []) {
   return out;
 }
 
+const modeOf = (opts) => (opts.local ? 'local' : opts.encrypted ? 'encrypted-public' : 'private');
+// A local build may name a folder instead of a repository: "mac build ./project --local".
+const folderOf = (repo, opts) => (opts.local && repo && (/^[.~/\\]|^[A-Za-z]:/.test(repo) || !/^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/.test(repo)) ? resolve(repo.replace(/^~(?=$|\/)/, homedir())) : null);
+
 async function repoRequest(be, repo, opts) {
-  if (!repo) throw new CliError('Which repository? e.g. mac build owner/name --all-scripts');
+  if (!repo) throw new CliError('Which repository? e.g. mac build owner/name --all-scripts (or a folder with --local)');
   let scripts = opts.script || [];
   let workflows = opts.workflow || [];
+  const folder = folderOf(repo, opts);
   if (opts['all-scripts'] || opts['all-workflows']) {
-    const q = new URLSearchParams({ repo, mode: opts.encrypted ? 'encrypted-public' : 'private' });
+    const q = new URLSearchParams({ repo, mode: modeOf(opts) });
     if (opts.ref) q.set('ref', opts.ref);
-    const scan = await be.call(`/api/scripts?${q}`);
+    const scan = folder ? await be.call(`/api/local/scan?${new URLSearchParams({ path: folder })}`) : await be.call(`/api/scripts?${q}`);
     if (opts['all-scripts']) scripts = scan.scripts;
     if (opts['all-workflows']) workflows = scan.workflows.filter((w) => w.dispatchable).map((w) => w.path);
     if (!opts.outputs && scripts.length) opts.outputs = scan.outputsGuess;
   }
   return {
     kind: 'scripts',
-    repo,
+    ...(folder ? { localPath: folder } : { repo }),
     ref: opts.ref || '',
     scripts,
     workflows,
     runner: opts.runner || 'windows-latest',
     outputs: opts.outputs || '',
-    mode: opts.encrypted ? 'encrypted-public' : 'private',
+    mode: modeOf(opts),
     ...(opts.name ? { name: opts.name } : {}),
   };
 }
@@ -325,7 +333,7 @@ const COMMANDS = {
       body: {
         kind: 'dockerfile', dockerfile, files, imageName: opts.image || 'custom-image:latest',
         platform: opts.platform || 'linux/amd64', buildArgs: buildArgsFrom(opts['build-arg']),
-        mode: opts.encrypted ? 'encrypted-public' : 'private',
+        mode: modeOf(opts),
       },
     });
     return finishBuild(be, created, opts);
@@ -362,6 +370,20 @@ const COMMANDS = {
     if (!id) throw new CliError('mac rm <id>');
     await be.call(`/api/builds/${id}`, { method: 'DELETE' });
     console.log(`Removed ${id}.`);
+    return 0;
+  },
+
+  async local(be, [action], opts) {
+    const caps = action === 'install' ? await be.call('/api/local/install', { method: 'POST' }) : await be.call('/api/local');
+    if (opts.json) { console.log(JSON.stringify(caps, null, 2)); return 0; }
+    const yes = (v, why) => (v ? `${lime('✓')} ${v === true ? 'yes' : v}` : `${dim('–')} ${why}`);
+    console.log(`${bold('This computer')}  ${caps.host} ${caps.arch}`);
+    console.log(`  Runner program   ${caps.act.installed ? `${lime('✓')} act ${caps.act.version} (${caps.act.source})` : caps.act.installable ? `${dim('·')} act ${caps.act.version} is downloaded on first use (or: mac local install)` : `${coral('✕')} install "act" yourself`}`);
+    console.log(`  Containers       ${caps.containers ? `${lime('✓')} ${caps.containers.engine} ${caps.containers.version}` : `${dim('–')} none`}`);
+    console.log(`  Linux jobs       ${yes(caps.canRun.linux === 'container' ? 'in containers' : caps.canRun.linux === 'host' ? 'directly on this computer' : false, 'need Docker, or a Linux computer')}`);
+    console.log(`  Windows jobs     ${yes(Boolean(caps.canRun.windows), 'need a Windows computer')}`);
+    console.log(`  macOS jobs       ${yes(Boolean(caps.canRun.macos), 'need a Mac')}`);
+    console.log(`  Docker images    ${yes(Boolean(caps.containers), 'need Docker')}`);
     return 0;
   },
 

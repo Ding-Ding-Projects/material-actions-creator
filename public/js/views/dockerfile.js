@@ -114,7 +114,7 @@ function mount(el) {
 
 async function build() {
   $('#formHint').textContent = '';
-  if (!(await requireSignIn())) return;
+  if (s.mode !== 'local' && !(await requireSignIn())) return;
   const btn = $('#buildBtn');
   btn.disabled = true;
   try {

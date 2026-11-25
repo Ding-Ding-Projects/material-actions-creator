@@ -4,13 +4,13 @@ import * as store from '../core/store.js';
 import { api } from '../core/api.js';
 import { t, h, v, esc } from '../core/i18n.js';
 import { notify } from '../core/feedback.js';
-import { modeCards } from '../ui/modes.js';
+import { localPanel, modeCards } from '../ui/modes.js';
 import { requireSignIn } from '../ui/auth.js';
 
 const saved = (() => { try { return JSON.parse(localStorage.getItem('mac-wf')) || {}; } catch { return {}; } })();
 const wf = {
   repo: saved.repo || '', ref: saved.ref || '', scripts: saved.scripts || [], workflows: saved.workflows || [],
-  runner: saved.runner || 'windows-latest', outputs: saved.outputs || 'dist/**/*.exe, dist/**/*.msi', mode: saved.mode || store.get('defaultMode') || 'private',
+  runner: saved.runner || 'windows-latest', outputs: saved.outputs || 'dist/**/*.exe, dist/**/*.msi', mode: saved.mode || store.get('defaultMode') || 'private', localPath: saved.localPath || '',
 };
 let runners = ['windows-latest'];
 let root;
@@ -21,7 +21,8 @@ export function setRunners(list) { runners = list; if (root) renderRunners(); }
 
 export const currentRequest = () => request();
 function request() {
-  return { kind: 'scripts', repo: wf.repo, ref: wf.ref, runner: wf.runner, scripts: wf.scripts.filter((s) => s.on).map((s) => s.path), workflows: wf.workflows.filter((w) => w.on).map((w) => w.path), outputs: wf.outputs, mode: wf.mode };
+  const local = wf.mode === 'local' && wf.localPath ? { localPath: wf.localPath } : {};
+  return { kind: 'scripts', repo: wf.repo, ref: wf.ref, runner: wf.runner, scripts: wf.scripts.filter((s) => s.on).map((s) => s.path), workflows: wf.workflows.filter((w) => w.on).map((w) => w.path), outputs: wf.outputs, mode: wf.mode, ...local };
 }
 
 function renderScripts() {
@@ -48,12 +49,19 @@ function renderRunners() {
   $('#wfRunners').innerHTML = runners.map((r) => `<button type="button" role="radio" class="chip-btn" aria-checked="${r === wf.runner}" data-runner="${r}">${r}</button>`).join('');
 }
 
-function renderModes() { $('#wfModes').innerHTML = modeCards(wf.mode); }
+function renderModes() {
+  $('#wfModes').innerHTML = modeCards(wf.mode);
+  const isLocal = wf.mode === 'local';
+  root.classList.toggle('is-local', isLocal);
+  $('#wfLocalRow').hidden = !isLocal;
+  $('#wfLocalCaps').hidden = !isLocal;
+  if (isLocal) localPanel($('#wfLocalCaps'));
+}
 
 let timer;
 function schedule() {
   const r = request();
-  $('#wfSummary').textContent = `${r.scripts.length} · ${r.workflows.length} · ${t(wf.mode === 'encrypted-public' ? 'mode.enc.title' : 'mode.private.title')}`;
+  $('#wfSummary').textContent = `${r.scripts.length} · ${r.workflows.length} · ${t(wf.mode === 'encrypted-public' ? 'mode.enc.title' : wf.mode === 'local' ? 'mode.local.title' : 'mode.private.title')}`;
   clearTimeout(timer);
   timer = setTimeout(preview, 250);
 }
@@ -72,6 +80,19 @@ function highlightYaml(src) {
 async function preview() {
   const req = request();
   const state = $('#wfYamlState');
+  if (wf.mode === 'local') {
+    // Nothing is generated for a local run: show what will happen instead.
+    const lines = [`# ${t('wf.localPlan')}`, `# ${req.localPath || `${req.repo} @ ${req.ref || 'HEAD'}`}`, ''];
+    for (const sc of req.scripts) lines.push(`${t('local.scripts')}: ${sc}`);
+    for (const w of wf.workflows.filter((x) => x.on)) {
+      lines.push('', `${w.name}  (${w.path})`);
+      for (const j of w.jobs || []) lines.push(`  ${j.runnable ? (j.partial ? '◐' : '✓') : '–'} ${j.name}${j.how ? `  [${j.how}]` : ''}${j.reason ? `  — ${j.reason}` : ''}`);
+    }
+    $('#wfYaml').textContent = lines.join('\n');
+    $('#wfYaml').dataset.yaml = '';
+    state.innerHTML = ''; state.className = 'muted';
+    return;
+  }
   if (!req.repo || (!req.scripts.length && !req.workflows.length)) {
     $('#wfYaml').innerHTML = esc(`# ${t('wf.previewEmpty')}\n`);
     $('#wfYaml').dataset.yaml = '';
@@ -101,9 +122,10 @@ async function scan() {
   try {
     const q = new URLSearchParams({ repo: $('#wfRepo').value.trim(), mode: wf.mode });
     if ($('#wfRef').value.trim()) q.set('ref', $('#wfRef').value.trim());
-    const r = await api(`/api/scripts?${q}`);
-    Object.assign(wf, { repo: r.repo, ref: r.ref });
-    $('#wfRepo').value = r.repo; $('#wfRef').value = r.ref;
+    const folder = wf.mode === 'local' ? $('#wfLocalPath').value.trim() : '';
+    const r = folder ? await api(`/api/local/scan?${new URLSearchParams({ path: folder })}`) : await api(`/api/scripts?${q}`);
+    if (folder) wf.localPath = r.localPath;
+    else { Object.assign(wf, { repo: r.repo, ref: r.ref, localPath: '' }); $('#wfRepo').value = r.repo; $('#wfRef').value = r.ref; }
     const keep = new Map(wf.scripts.map((s) => [s.path, s.on]));
     wf.scripts = r.scripts.map((p) => ({ path: p, on: keep.has(p) ? keep.get(p) : /install|build|setup|package|release/i.test(p) }));
     const keepWf = new Map(wf.workflows.map((w) => [w.path, w.on]));
@@ -129,6 +151,7 @@ function mount(el) {
           <label class="field"><span>${h('wf.ref')}</span><input id="wfRef" spellcheck="false" autocomplete="off"></label>
           <button class="btn scan" type="button" id="wfScan">${h('wf.scan')}</button>
         </div>
+        <div id="wfLocalRow" hidden><label class="field"><span>${h('wf.localPath')}</span><input id="wfLocalPath" placeholder="/home/you/project" spellcheck="false" autocomplete="off"></label><p class="muted small">${h('wf.localPathWhy')}</p></div>
       </div>
       <div class="panel" data-ui="wf-scripts">
         <div class="panel-head"><p class="step">${h('wf.scripts')}</p><span class="muted small" id="wfScriptHint">${h('wf.scriptsHint')}</span></div>
@@ -147,6 +170,7 @@ function mount(el) {
         <div class="panel" data-ui="wf-outputs"><p class="step">${h('wf.outputs')}</p><label class="field"><span>${h('wf.outputsLabel')}</span><input id="wfOutputs" spellcheck="false"></label></div>
       </div>
       <div class="panel" data-ui="wf-where"><p class="step">${h('wf.where')}</p><div id="wfModes"></div></div>
+      <div class="panel" id="wfLocalCaps" data-ui="wf-local" hidden></div>
     </section>
     <aside class="stack-col sticky">
       <div class="yaml-card" data-ui="wf-yaml"><div class="yaml-head"><span>.github/workflows/mac-build.yml</span><span class="ok" id="wfYamlState"></span><button type="button" class="text-btn" id="wfLint">${h('ext.lint')}</button></div><pre id="wfYaml" class="yaml" tabindex="0"></pre><div id="wfLintOut" class="wf-lint" aria-live="polite"></div></div>
@@ -155,7 +179,8 @@ function mount(el) {
       <p class="hint" id="wfHint" role="alert"></p>
       <button class="text-btn center" type="button" id="wfExport">${h('wf.export')}</button>
     </aside>`;
-  $('#wfRepo').value = wf.repo; $('#wfRef').value = wf.ref; $('#wfOutputs').value = wf.outputs;
+  $('#wfRepo').value = wf.repo; $('#wfRef').value = wf.ref; $('#wfOutputs').value = wf.outputs; $('#wfLocalPath').value = wf.localPath;
+  $('#wfLocalPath').addEventListener('input', (e) => { wf.localPath = e.target.value.trim(); save(); schedule(); });
   for (const [sel, k] of [['#wfRepo', 'repo'], ['#wfRef', 'ref'], ['#wfOutputs', 'outputs']]) $(sel).addEventListener('input', (e) => { wf[k] = e.target.value; save(); schedule(); });
   el.addEventListener('click', async (e) => {
     if (e.target.closest('#wfLint')) {
@@ -170,7 +195,7 @@ function mount(el) {
     const runner = e.target.closest('[data-runner]');
     if (runner) { wf.runner = runner.dataset.runner; save(); renderRunners(); schedule(); return; }
     const mode = e.target.closest('[data-mode]');
-    if (mode) { wf.mode = mode.dataset.mode; save(); renderModes(); schedule(); return; }
+    if (mode) { const was = wf.mode; wf.mode = mode.dataset.mode; save(); renderModes(); schedule(); if ((was === 'local') !== (wf.mode === 'local') && (wf.repo || (wf.mode === 'local' && wf.localPath))) scan(); return; }
     const id = e.target.closest('button')?.id;
     if (id === 'wfScan') scan();
     if (id === 'wfAllScripts' || id === 'wfNoScripts') { s.forEach((x) => { x.on = id === 'wfAllScripts'; }); save(); renderScripts(); schedule(); }
@@ -204,14 +229,14 @@ function addScript() {
 
 async function run() {
   $('#wfHint').textContent = '';
-  if (!(await requireSignIn())) return;
+  if (!(wf.mode === 'local' && wf.localPath) && !(await requireSignIn())) return;
   const btn = $('#wfRun');
   btn.disabled = true;
   try {
     const job = await api('/api/builds', { method: 'POST', body: request() });
     document.dispatchEvent(new CustomEvent('mac:build', { detail: job }));
     await registry.teleport({ tab: 'runs' });
-    notify(t(job.mode === 'encrypted-public' ? 'toast.encQueued' : 'toast.queued'), { kind: 'progress' });
+    notify(t(job.mode === 'encrypted-public' ? 'toast.encQueued' : job.mode === 'local' ? 'toast.localQueued' : 'toast.queued'), { kind: 'progress' });
   } catch (err) { $('#wfHint').textContent = v(err.message); }
   finally { btn.disabled = false; }
 }

@@ -1,6 +1,41 @@
 {
   "releases": [
     {
+      "version": "0.7.0",
+      "date": "2026-11-25",
+      "title": "Run on this computer",
+      "changes": [
+        {
+          "type": "added",
+          "text": "A third run mode, This computer: build scripts, a repository's workflows or a Dockerfile run locally with no repository, no Actions minutes and no upload."
+        },
+        {
+          "type": "added",
+          "text": "The local runner program (act 0.2.98) is downloaded on first use at a pinned version and checked against a pinned hash."
+        },
+        {
+          "type": "added",
+          "text": "A folder on this computer can be built without signing in; it is copied first and the original is not changed."
+        },
+        {
+          "type": "added",
+          "text": "Jobs that cannot run on this computer (Windows jobs off Windows, macOS jobs off a Mac) are listed by name with the reason before and after the run."
+        },
+        {
+          "type": "added",
+          "text": "The log of a local run updates in the Workspace while it runs, with step timings."
+        },
+        {
+          "type": "added",
+          "text": "mac local, mac local install and --local for mac build and mac docker."
+        },
+        {
+          "type": "fixed",
+          "text": "Extension settings and recipes no longer fail to save when two saves happen at once."
+        }
+      ]
+    },
+    {
       "version": "0.6.0",
       "date": "2026-11-25",
       "title": "Workspace, recipes and packages",
