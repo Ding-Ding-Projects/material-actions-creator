@@ -95,7 +95,7 @@ export class ExtensionHost extends EventEmitter {
     this.exts = new Map();
     this.state = {};
     this.broken = [];
-    this.running = new Set();
+    this.running = new Map();
   }
 
   async load() {
@@ -226,14 +226,18 @@ export class ExtensionHost extends EventEmitter {
     const v = this.view(id);
     if (!v.enabled) throw Object.assign(new Error(v.needsConsent ? 'This extension is waiting for its permissions to be allowed.' : 'This extension is turned off.'), { status: 409 });
     if (!e.manifest.hooks.includes(hook)) throw Object.assign(new Error(`This extension does not handle "${hook}".`), { status: 400 });
-    if (this.running.has(id)) throw Object.assign(new Error('This extension is already running.'), { status: 409 });
     const payload = this.payloadFor(hook, v.granted, ctx);
-    this.running.add(id);
+    // One run at a time per extension; later requests wait their turn.
+    const prev = this.running.get(id) || Promise.resolve();
+    let release;
+    const turn = new Promise((r) => { release = r; });
+    this.running.set(id, prev.then(() => turn));
+    await prev;
     const started = Date.now();
     let outcome;
     try {
       outcome = await this.exec(e, { protocol: PROTOCOL, hook, extension: { id, version: e.manifest.version }, payload });
-    } finally { this.running.delete(id); }
+    } finally { release(); }
     const record = { at: started, hook, ms: Date.now() - started, bytes: outcome.bytes, ok: outcome.ok, error: outcome.error || null, result: outcome.result || null, ...(ctx.build ? { buildId: ctx.build.id } : {}) };
     this.state[id].lastRun = record;
     await this.save().catch(() => {});

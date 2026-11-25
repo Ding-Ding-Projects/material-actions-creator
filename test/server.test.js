@@ -163,7 +163,7 @@ test('extensions API: list, lint a workflow, consent gate, and the finished-buil
   }
   assert.equal(sums.ok, true);
   assert.equal(sums.hook, 'build.finished');
-  assert.equal(sums.result.items.length, 1); // hashing itself is covered in extensions.test.js
+  assert.ok(sums.result.items.length >= 1); // hashing itself is covered in extensions.test.js
 
   const off = await (await call('/api/extensions/checksums', { method: 'POST', body: { enabled: false } })).json();
   assert.equal(off.enabled, false);

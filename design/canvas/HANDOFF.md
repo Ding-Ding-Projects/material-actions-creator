@@ -47,3 +47,7 @@ Findings from those frames and their state:
 ## Pass 2026-11-24 — app shell
 
 New boards above. Motion per board: Shell — springing tab underline, palette pop-in, blinking caret; Onboarding — growing progress bars, pulsing tour ring, flowing dashed pointer; Vocab — drop zone pop-in, 24-piece burst and spring headline; Records — meter grows from the left, rows rise in sequence. All stilled by the motion Tweak and reduced motion. The app ships the same motion in `public/css/shell.css`. These boards were made after the matching code in this pass rather than before it, and were not rendered as frames before publishing.
+
+## Pass 2026-11-25 — extensions and Linux
+
+Boards drawn before the code this time: `Extensions.dc.html` (page "Extensions — manager and consent"; Tweaks accent, motion, stage) and `Linux.dc.html` (page "Linux — launcher and self-check"; Tweaks accent, motion, stage). Motion: extension cards rise in sequence, the switch knob springs, the consent dialog pops in and the new permission pulses; on the Linux board the check rows rise in sequence and the terminal cursor blinks. All stilled by the motion Tweak and reduced motion. The app carries the same motion in `public/css/shell.css` (extension cards, pending chips, consent ring). Differences from the boards: the app has no raw JSON-line log panel, and the launcher prints `warn`/`FAIL` rows the same way but in plain terminal text. Frames of the canvas boards were not rendered; the app itself is screenshotted by `scripts/browser-check.mjs` into `docs/screenshots/`.

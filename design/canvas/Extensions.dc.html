@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Extensions manager</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#d4ff3a}a:hover{color:#eaff8f}
+@keyframes macpulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes macrise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes macflow{from{background-position:0% 50%}to{background-position:200% 50%}}
+@keyframes macorb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,-40px) scale(1.18)}}
+@keyframes macorb2{0%,100%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-70px,50px) scale(.9)}}
+.mac-orb{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:-1}
+[data-motion="on"] .mac-orb{animation:macorb 14s ease-in-out infinite}
+[data-motion="on"] .mac-orb + .mac-orb{animation:macorb2 18s ease-in-out infinite}
+[data-motion="on"] section,[data-motion="on"] article,[data-motion="on"] aside,[data-motion="on"] [role="dialog"]{animation:macrise .8s cubic-bezier(.2,.9,.1,1) both}
+[data-motion="on"] section:nth-of-type(2),[data-motion="on"] article:nth-of-type(2),[data-motion="on"] aside{animation-delay:.12s}
+[data-motion="on"] article:nth-of-type(3){animation-delay:.24s}
+[data-motion="on"] button,[data-motion="on"] a,[data-motion="on"] label{transition:transform .3s cubic-bezier(.2,.9,.1,1),filter .25s,background .25s,border-color .25s,box-shadow .3s}
+[data-motion="on"] button:hover,[data-motion="on"] a:hover{transform:translateY(-2px);filter:brightness(1.08)}
+[data-motion="off"] *,[data-motion="off"] *::before,[data-motion="off"] *::after{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+@keyframes macpop{from{opacity:0;transform:scale(.9) translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes macink{from{transform:scaleX(.15)}to{transform:none}}
+@keyframes macgrow{from{transform:scaleX(0)}to{transform:none}}
+@keyframes macburst{from{opacity:1;transform:rotate(var(--a)) translateY(0)}to{opacity:0;transform:rotate(var(--a)) translateY(-260px) rotate(220deg)}}
+@keyframes maclevel{0%{opacity:0;transform:scale(.4) rotate(-6deg)}20%{opacity:1;transform:scale(1.08) rotate(2deg)}32%{transform:none}100%{opacity:1}}
+@keyframes macring{0%,100%{box-shadow:0 0 0 4px var(--acc),0 0 0 9999px rgba(5,6,9,.5)}50%{box-shadow:0 0 0 8px var(--acc),0 0 0 9999px rgba(5,6,9,.5)}}
+@keyframes macdash{to{stroke-dashoffset:-24}}
+[data-motion="on"] .mac-pop{animation:macpop .45s cubic-bezier(.34,1.56,.64,1) both}
+[data-motion="on"] .mac-ink{animation:macink .5s cubic-bezier(.34,1.56,.64,1) both;transform-origin:center}
+[data-motion="on"] .mac-grow{animation:macgrow 1.1s cubic-bezier(.2,.9,.1,1) both;transform-origin:left}
+[data-motion="on"] .mac-burst i{animation:macburst 1.6s cubic-bezier(.2,.9,.1,1) infinite}
+[data-motion="on"] .mac-level{animation:maclevel 1.2s cubic-bezier(.34,1.56,.64,1) both}
+[data-motion="on"] .mac-ring{animation:macring 1.6s ease-in-out infinite}
+[data-motion="on"] .mac-dash{animation:macdash 1s linear infinite}
+[data-motion="on"] li{animation:macrise .6s cubic-bezier(.2,.9,.1,1) both}
+</style>
+</helmet>
+<div data-motion="{{motionFlag}}" style="--acc: {{accent}}; isolation: isolate; width: 1440px; height: 900px; box-sizing: border-box; background: #0b0c10; color: #eef0f6; font-family: 'Bricolage Grotesque', system-ui, sans-serif; position: relative; overflow: hidden">
+<div class="mac-orb" aria-hidden="true" style="width: 560px; height: 560px; left: -180px; top: -220px; background: {{accent}}; opacity: .14"></div><div class="mac-orb" aria-hidden="true" style="width: 480px; height: 480px; right: -160px; top: 120px; background: #b69cff; opacity: .16"></div>
+
+<div style="padding: 48px 56px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; height: 100%; box-sizing: border-box">
+  <section>
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #8d93a8; margin: 0 0 10px">Extensions</p>
+    <h2 style="font-size: 52px; letter-spacing: -.04em; line-height: .95; margin: 0 0 10px">Teach it <span style="color: {{accent}}">new tricks.</span></h2>
+    <p style="color: #a7adc0; line-height: 1.5; max-width: 60ch; margin: 0 0 18px">Each extension is a folder with a manifest and any program that reads one JSON line and writes one back. It runs as a separate process, with a time limit, an output limit and no sign-in values.</p>
+    <div style="display: flex; gap: 6px; margin-bottom: 14px"><div style="flex: 1; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid #2c3140; border-radius: 14px; font-family: 'JetBrains Mono', monospace; color: #8d93a8">⌕ Search extensions</div><span style="display: grid; place-items: center; min-width: 48px; border: 1px solid #2c3140; border-radius: 14px; font-family: 'JetBrains Mono', monospace; color: #8d93a8">.*</span></div>
+    <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 10px"><sc-for list="{{exts}}" as="e" hint-placeholder-count="4"><li style="background: #12141b; border: 1px solid #2c3140; border-radius: 22px; padding: 16px 18px; display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center; animation-delay: {{e.delay}}; border-color: {{e.border}}">
+      <span style="width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; font-size: 20px; background: {{e.tint}}">{{e.icon}}</span>
+      <div><div style="font-weight: 700">{{e.name}} <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8d93a8">v{{e.version}} · {{e.lang}}</span></div><div style="font-size: 13px; color: #a7adc0; margin-top: 2px">{{e.what}}</div><div style="display: flex; gap: 6px; margin-top: 8px"><sc-for list="{{e.perms}}" as="p" hint-placeholder-count="2"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 8px; border-radius: 99px; background: #232733; color: #c9cede">{{p}}</span></sc-for></div></div>
+      <button type="button" onClick="{{e.toggle}}" role="switch" aria-checked="{{e.on}}" aria-label="Enable" style="width: 56px; height: 32px; border-radius: 99px; border: 1px solid #2c3140; background: {{e.track}}; position: relative; padding: 0"><span style="position: absolute; top: 3px; left: {{e.knob}}; width: 24px; height: 24px; border-radius: 50%; background: {{e.knobColor}}; transition: left .35s cubic-bezier(.34,1.56,.64,1)"></span></button>
+    </li></sc-for></ul>
+  </section>
+  <section style="display: grid; gap: 14px; align-content: start">
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #8d93a8; margin: 0 0 10px">Last run · checksums</p>
+    <pre style="margin: 0; padding: 16px; border-radius: 16px; background: #0b0c10; border: 1px solid #2c3140; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.7; color: #c9cede; white-space: pre-wrap">{{log}}</pre>
+    <div style="background: #12141b; border: 1px solid #2c3140; border-radius: 22px; padding: 16px 18px"><div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8d93a8; margin-bottom: 8px">LIMITS</div><div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 14px"><div><strong style="font-size: 22px">10 s</strong><br><span style="color: #8d93a8">time</span></div><div><strong style="font-size: 22px">256 KB</strong><br><span style="color: #8d93a8">output</span></div><div><strong style="font-size: 22px">0</strong><br><span style="color: #8d93a8">sign-in values</span></div></div></div>
+  </section>
+</div>
+<div role="dialog" aria-label="Permission request" class="mac-pop" style="display: {{consentDisplay}}; position: absolute; left: 50%; top: 150px; transform: translateX(-50%); width: 560px; background: #12141b; border: 1px solid #2c3140; border-radius: 22px; border-radius: 30px; padding: 28px; box-shadow: 0 0 0 9999px rgba(5,6,9,.6), 0 40px 140px rgba(0,0,0,.65)">
+  <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #8d93a8; margin: 0 0 10px">Permission request</p>
+  <h3 style="font-size: 28px; letter-spacing: -.02em; margin: 0 0 6px">“Output checksums” wants more</h3>
+  <p style="color: #a7adc0; margin: 0 0 16px; line-height: 1.5">Version 1.1.0 asks for something version 1.0.0 did not. It stays off until you decide.</p>
+  <div style="display: grid; gap: 8px; margin-bottom: 20px">
+    <div style="display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 14px; background: #191c25"><span style="color: #7cf5c8">✓</span><div><strong>Build details</strong><div style="font-size: 13px; color: #8d93a8">Repository name, status and timing. Already allowed.</div></div></div>
+    <div class="mac-ring" style="display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 14px; background: #191c25; box-shadow: 0 0 0 2px {{accent}}"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 8px; border-radius: 99px; background: {{accent}}; color: #141a00">NEW</span><div><strong>Read output files</strong><div style="font-size: 13px; color: #8d93a8">Paths of the decrypted outputs on this computer.</div></div></div>
+  </div>
+  <div style="display: flex; gap: 10px; justify-content: flex-end"><button type="button" onClick="{{deny}}" style="min-height: 48px; padding: 0 18px; border: 1px solid #2c3140; border-radius: 14px; background: #191c25; color: #eef0f6; font: 600 15px 'Bricolage Grotesque', sans-serif">Keep it off</button><button type="button" onClick="{{allow}}" style="min-height: 52px; padding: 0 24px; border: 0; border-radius: 22px; background: {{accent}}; color: #141a00; font: 800 16px 'Bricolage Grotesque', sans-serif">Allow and turn on</button></div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent": {"editor": "color", "default": "#d4ff3a", "options": ["#d4ff3a", "#7cf5c8", "#b69cff", "#ff9e7a"], "section": "Look"}, "motion": {"editor": "boolean", "default": true, "section": "Look"}, "stage": {"editor": "select", "default": "consent", "options": ["consent", "list", "timeout"], "section": "Stage"}, "$preview": {"width": 1440, "height": 900}}'>
+class Component extends DCLogic {
+
+  constructor(p) { super(p); this.state = { stage: null, off: { 'run-notes': true } }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#d4ff3a';
+    const motion = this.props.motion ?? true;
+    const stage = this.state.stage ?? (this.props.stage ?? 'consent');
+    const list = [
+      ['checksums', '#', 'Output checksums', '1.1.0', 'node', 'SHA-256 for every output when a build finishes.', ['Build details', 'Read output files'], 'rgba(124,245,200,.14)'],
+      ['workflow-lint', '✓', 'Workflow lint', '1.0.0', 'node', 'Flags unpinned actions and missing timeouts in the generated workflow.', ['Workflow text'], 'rgba(182,156,255,.14)'],
+      ['build-summary', '≡', 'Build summary', '1.0.0', 'python', 'A Markdown summary of the build to copy into a release note.', ['Build details'], 'rgba(255,200,87,.14)'],
+      ['run-notes', '✎', 'Run notes', '0.3.0', 'sh', 'Sample: appends one line per finished build to a notes file.', ['Build details'], 'rgba(255,158,122,.14)'],
+    ];
+    const pending = stage === 'consent';
+    const exts = list.map(([id, icon, name, version, lang, what, perms, tint], i) => {
+      const on = !this.state.off[id] && !(pending && id === 'checksums');
+      return { icon, name, version, lang, what, perms, tint, on: on ? 'true' : 'false', delay: i * 70 + 'ms', border: pending && id === 'checksums' ? accent : '#2c3140',
+        track: on ? accent : '#232733', knob: on ? '27px' : '3px', knobColor: on ? '#141a00' : '#8d93a8',
+        toggle: () => this.setState({ off: { ...this.state.off, [id]: on } }) };
+    });
+    const log = stage === 'timeout'
+      ? '→ {"protocol":1,"hook":"build.finished",…}\n✗ stopped after 10 s (time limit)\n  The build itself is not affected.'
+      : '→ {"protocol":1,"hook":"build.finished",…}\n← {"ok":true,"result":{"title":"2 outputs"}}\n  9f2c…e1a0  Setup.exe\n  41bd…77c3  app-1.4.0-full.nupkg\n✓ 38 ms · 212 bytes';
+    return { accent, motionFlag: motion ? 'on' : 'off', exts, log, consentDisplay: pending ? 'block' : 'none',
+      allow: () => this.setState({ stage: 'list' }), deny: () => this.setState({ stage: 'list', off: { ...this.state.off, checksums: true } }) };
+  }
+}
+</script>
+</body>
+</html>

@@ -45,6 +45,14 @@
   {
    "id": "records",
    "name": "Records — completeness and history"
+  },
+  {
+   "id": "extensions",
+   "name": "Extensions — manager and consent"
+  },
+  {
+   "id": "linux",
+   "name": "Linux — launcher and self-check"
   }
  ],
  "boards": {
@@ -168,6 +176,25 @@
    "page": "records",
    "expand": "fill",
    "is_interactive": true
+  },
+  "Extensions.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Extension manager + permission consent",
+   "page": "extensions",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Linux.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 820,
+   "title": "run-linux.sh — one command, self-check",
+   "page": "linux",
+   "expand": "fill"
   }
  },
  "order": [
@@ -183,7 +210,9 @@
   "Shell.dc.html",
   "Onboarding.dc.html",
   "Vocab.dc.html",
-  "Records.dc.html"
+  "Records.dc.html",
+  "Extensions.dc.html",
+  "Linux.dc.html"
  ],
  "notes": {
   "title-workflows": {
@@ -357,6 +386,36 @@
    "w": 340,
    "text": "Completeness page (125 features: 36 done, 28 partial, 49 not built, 12 not applicable, with filters) beside the History tab (notifications plus settings changes with Restore). Try: the status filter. Tweaks: accent, motion, filter. Stands for views/info.js, public/completeness.json and test/completeness.test.js. Rows are a sample.",
    "page": "records"
+  },
+  "title-extensions": {
+   "x": 0,
+   "y": -300,
+   "text": "Extensions — manager and consent",
+   "kind": "title1",
+   "maxW": 1820,
+   "page": "extensions"
+  },
+  "title-linux": {
+   "x": 0,
+   "y": -300,
+   "text": "Linux — launcher and self-check",
+   "kind": "title1",
+   "maxW": 1820,
+   "page": "linux"
+  },
+  "note-Extensions": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "Searchable extension manager: built-in defaults, permission chips and switches, the last run's JSON-line exchange, and the consent dialog shown when a new version asks for a new permission. Try: the switches; Allow / Keep it off. Tweaks: accent, motion, stage (consent/list/timeout). Drawn before the code. Built since: public/js/views/extensions.js and src/extensions.js; the app shows the last result per card instead of the raw exchange. Not planned: an operating-system sandbox.",
+   "page": "extensions"
+  },
+  "note-Linux": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "The Linux run path: scripts/run-linux.sh checks Node, the GitHub CLI, folders and the port, starts the server, and can install a systemd user service. Tweaks: accent, motion, stage (ready/missing-gh). Drawn before the code. Built since and run on Linux. Not verified: starting the service under a real systemd user session.",
+   "page": "linux"
   }
  },
  "designSystems": []

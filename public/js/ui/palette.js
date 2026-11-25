@@ -68,6 +68,7 @@ function build() {
   dlg.innerHTML = `<div class="pal-inner"><div class="pal-search"></div><ul class="pal-list" role="listbox" aria-label="${esc(t('palette.title'))}"></ul><p class="pal-foot muted">↑↓ · Enter · Esc · <kbd>Ctrl+Shift+F</kbd></p></div>`;
   const field = searchField({ placeholderKey: 'palette.placeholder', ui: 'palette-search', onChange: (m) => { matcher = m; index = 0; renderList(); } });
   dlg.querySelector('.pal-search').append(field);
+  document.body.append(dlg);
   dlg.addEventListener('keydown', (e) => {
     if (e.target.closest('.rx-panel')) return;
     if (e.key === 'ArrowDown') { e.preventDefault(); index = Math.min(results.length - 1, index + 1); renderList(); dlg.querySelector('.pal-list li.on')?.scrollIntoView({ block: 'nearest' }); }

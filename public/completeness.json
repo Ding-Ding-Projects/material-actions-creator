@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-24",
+ "updated": "2026-11-25",
  "features": [
   {
    "area": "Language and personalization",
@@ -209,8 +209,9 @@
    "area": "Navigation and search",
    "id": "extension-support",
    "title": "Extension support",
-   "status": "missing",
-   "note": "No extension manifest, protocol or manager yet."
+   "status": "done",
+   "note": "Manifest, one-line JSON protocol out of process, consent on new permissions, limits, searchable manager, three built-ins, author guide with runnable samples.",
+   "proof": "src/extensions.js"
   },
   {
    "area": "Navigation and search",
@@ -233,7 +234,7 @@
    "id": "command-palette",
    "title": "Ctrl+Shift+F command palette",
    "status": "done",
-   "note": "Pages, commands and live setting controls, with teleport to the element.",
+   "note": "Pages, commands and live setting controls, with teleport to the element. Covered by the browser check.",
    "proof": "public/js/ui/palette.js"
   },
   {
@@ -538,8 +539,9 @@
    "area": "Completeness and evidence",
    "id": "product-evidence",
    "title": "Real screenshots wherever a surface is described",
-   "status": "missing",
-   "note": "No screenshots yet."
+   "status": "partial",
+   "note": "Screenshots from the browser check are in docs/screenshots; not every surface has one.",
+   "proof": "docs/screenshots/03-extensions.png"
   },
   {
    "area": "Completeness and evidence",
@@ -568,8 +570,9 @@
    "area": "Completeness and evidence",
    "id": "device-test-matrix",
    "title": "Browser and device test matrix",
-   "status": "missing",
-   "note": "Not built."
+   "status": "partial",
+   "note": "The browser check runs desktop and 360 px widths in Chrome on Linux only.",
+   "proof": "scripts/browser-check.mjs"
   },
   {
    "area": "Completeness and evidence",
@@ -691,8 +694,8 @@
    "id": "fresh-build-run-command",
    "title": "One build-and-run command",
    "status": "partial",
-   "note": "docker run documented; no single script.",
-   "proof": "README.md"
+   "note": "scripts/run-linux.sh on Linux and docker run elsewhere; no Windows one-liner.",
+   "proof": "scripts/run-linux.sh"
   },
   {
    "area": "Build and install",

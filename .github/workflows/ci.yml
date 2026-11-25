@@ -33,6 +33,37 @@ jobs:
       - name: Test
         run: npm test
 
+  linux:
+    name: Linux launcher, self-test and browser check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Lint the launcher
+        run: shellcheck scripts/run-linux.sh extension-samples/hello-shell/main.sh
+      - name: Self-test (installs dependencies itself)
+        run: scripts/run-linux.sh --self-test
+      - name: Unit file and menu entry are written
+        run: |
+          export HOME="$RUNNER_TEMP/home"
+          mkdir -p "$HOME"
+          scripts/run-linux.sh --install-service --port 8123 || [ $? -eq 3 ]
+          grep -q 'Environment=PORT=8123' "$HOME/.config/systemd/user/material-actions-creator.service"
+          scripts/run-linux.sh --install-desktop
+          test -f "$HOME/.local/share/applications/material-actions-creator.desktop"
+      - name: Browser check in headless Chrome
+        run: node scripts/browser-check.mjs --shots shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-check-screenshots
+          path: shots
+          if-no-files-found: ignore
+
   lint-workflows:
     name: Lint repo + generated workflows
     runs-on: ubuntu-latest

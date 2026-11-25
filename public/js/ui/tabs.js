@@ -77,7 +77,9 @@ export function show(id) {
     l.active = id;
     const apply = () => { save(l); render(); resolve(); };
     if (document.startViewTransition && document.documentElement.dataset.motion !== 'reduced' && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      document.startViewTransition(apply);
+      // A skipped transition (resize, a second switch) still applies the change; it is not an error.
+      const vt = document.startViewTransition(apply);
+      for (const k of ['ready', 'finished', 'updateCallbackDone']) vt[k]?.catch(() => {});
     } else apply();
   });
 }

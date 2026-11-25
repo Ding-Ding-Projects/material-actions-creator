@@ -1,6 +1,49 @@
 {
   "releases": [
     {
+      "version": "0.5.0",
+      "date": "2026-11-25",
+      "title": "Extensions and Linux",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Extensions: a folder with a manifest and a program in any language, run as a separate process over a one-line JSON protocol with time and output limits."
+        },
+        {
+          "type": "added",
+          "text": "Extensions tab with search, permission consent on first use and whenever a new version asks for more, on-demand runs and last results."
+        },
+        {
+          "type": "added",
+          "text": "Built-in extensions: output checksums, workflow lint and build summary. Sample extensions in sh and Python for authors."
+        },
+        {
+          "type": "added",
+          "text": "Check with extensions on the workflow preview."
+        },
+        {
+          "type": "added",
+          "text": "Linux launcher (scripts/run-linux.sh) with checks, a self-test, a systemd user service and an applications-menu entry."
+        },
+        {
+          "type": "added",
+          "text": "Browser check (scripts/browser-check.mjs) that drives the real page in headless Chrome; it runs in CI."
+        },
+        {
+          "type": "fixed",
+          "text": "The Ctrl+Shift+F command palette now opens; it was never attached to the page in 0.4.0."
+        },
+        {
+          "type": "fixed",
+          "text": "Switching tabs while the window is resized no longer reports an error."
+        },
+        {
+          "type": "changed",
+          "text": "The server listens on the address in HOST (all addresses by default, 127.0.0.1 from the Linux launcher)."
+        }
+      ]
+    },
+    {
       "version": "0.4.0",
       "date": "2026-11-24",
       "title": "A full app shell",

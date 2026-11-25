@@ -146,6 +146,15 @@ test('broken manifests are listed, not loaded; state survives a restart', async 
   assert.equal(again.view('demo').enabled, true);
 });
 
+test('runs of one extension queue up instead of overlapping', async () => {
+  const { h } = await host(async ({ user }) => makeExt(user, base, `${READ}setTimeout(()=>console.log(JSON.stringify({ok:true,result:{title:req.payload.input}})),120)`));
+  await h.configure('demo', { grant: [], enabled: true });
+  const t0 = Date.now();
+  const [a, b, c] = await Promise.all(['a', 'b', 'c'].map((input) => h.run('demo', 'command', { input })));
+  assert.deepEqual([a.result.title, b.result.title, c.result.title], ['a', 'b', 'c']);
+  assert.ok(Date.now() - t0 >= 340, 'ran one after another');
+});
+
 test('results are trimmed to plain, bounded data', () => {
   const r = cleanResult({ title: 'x'.repeat(999), html: '<script>', items: [{ label: 1, value: {} }, null], findings: [{ level: 'fatal', message: 'm', line: 2.5 }] });
   assert.equal(r.title.length, 200);

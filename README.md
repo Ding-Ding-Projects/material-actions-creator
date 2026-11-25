@@ -90,6 +90,28 @@ Open http://localhost:8080 and click **Sign in with GitHub CLI**. The server run
 
 Without Docker: `npm start` (Node 22+, and `gh` on the `PATH` for the assisted sign-in).
 
+### Linux, without Docker
+
+```sh
+scripts/run-linux.sh                    # checks the machine, installs dependencies, starts on 127.0.0.1:8080
+scripts/run-linux.sh --self-test        # spare port, throwaway data: server, API, extensions, clean stop
+scripts/run-linux.sh --install-service  # systemd user service
+```
+
+Data goes to `~/.local/share/material-actions-creator`, settings to `~/.config/material-actions-creator/env`. See **Docs → Running on Linux** in the app.
+
+![Extensions tab](docs/screenshots/03-extensions.png)
+
+## Extensions
+
+An extension is a folder with a `manifest.json` and a program in any language. The app runs it as a separate process, sends one line of JSON and reads one line back, with a time limit, an output limit and none of your sign-in values. It asks before an extension first runs and whenever a new version wants a permission you have not allowed.
+
+- Built in (`extensions/`): **Output checksums**, **Workflow lint**, **Build summary**.
+- Samples for authors (`extension-samples/`): `hello-shell` (POSIX sh) and `word-count-python`.
+- Guide: **Docs → Writing an extension** in the app, or [`public/docs/extensions.md`](public/docs/extensions.md).
+
+Permissions decide what the app hands over; they are not an operating-system sandbox, so only add extensions you trust.
+
 ### Configuration
 
 | Variable | Default | Purpose |
@@ -98,6 +120,7 @@ Without Docker: `npm start` (Node 22+, and `gh` on the `PATH` for the assisted s
 | `GITHUB_TOKEN` | — | Use this token instead of the GitHub CLI sign-in |
 | `APP_ACCESS_KEY` | — | Require a key for the API and downloads |
 | `PORT` | `8080` | HTTP port |
+| `HOST` | `0.0.0.0` | Address to listen on (`127.0.0.1` from the Linux launcher) |
 | `DATA_DIR` | `/data/builds` | Where finished images are kept |
 | `GH_CONFIG_DIR` | `/data/gh` | GitHub CLI sign-in storage |
 | `DOWNLOAD_TTL_MINUTES` | `60` | How long downloads stay available |
@@ -115,7 +138,7 @@ npm test
 
 GitHub Actions in this repository:
 
-- **`ci.yml`** — mac-crypt compatibility on Ubuntu, Windows and macOS (seal → unpack → run a real `.bat`/`.sh` → seal → open), unit + integration tests on Node 22 and 24 (fake GitHub API, fake `gh` binary), actionlint on this repo's workflows and on generated build workflows, Docker image build and container smoke test.
+- **`ci.yml`** — mac-crypt compatibility on Ubuntu, Windows and macOS (seal → unpack → run a real `.bat`/`.sh` → seal → open), unit + integration tests on Node 22 and 24 (fake GitHub API, fake `gh` binary), actionlint on this repo's workflows and on generated build workflows, Docker image build and container smoke test, and a Linux job that lints and runs the launcher's self-test and drives the real page in headless Chrome (`scripts/browser-check.mjs`).
 - **`e2e.yml`** — live end-to-end: builds a real image through a throwaway repository, loads and runs it, and checks the repository is gone. Needs the `E2E_GITHUB_TOKEN` secret (classic token with `repo`, `workflow`, `delete_repo`); skipped without it.
 - **`pages.yml`** — deploys the docs site in `docs/` to GitHub Pages.
 
