@@ -9,8 +9,9 @@
 // the builds keep running on GitHub; on the next start each unfinished build is
 // picked up where it was and finished (download, decrypt, clean up).
 import { randomBytes } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
-import { mkdir, rm, stat, readFile, writeFile, rename } from 'node:fs/promises';
+import { createWriteStream, createReadStream } from 'node:fs';
+import { mkdir, rm, stat, readFile, writeFile, rename, cp } from 'node:fs/promises';
+import { createGzip } from 'node:zlib';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
@@ -22,7 +23,8 @@ import {
 } from './workflow.js';
 import { listEntries, extractEntry } from './zip.js';
 import { transformWorkflow, workflowName, OUTPUT_PREFIX } from './transform.js';
-import { keygen, seal, open, safeRelPath } from './mac-crypt.mjs';
+import { keygen, seal, open, safeRelPath, findFiles } from './mac-crypt.mjs';
+import { planWorkflow, localWorkflow, actArgs, parseActLine, collectArtifacts } from './local.js';
 import { sealedBox } from './sealedbox.js';
 
 export const REPO_PREFIX = 'mac-tmp-';
@@ -46,7 +48,10 @@ const STAGE_LABELS = {
   cleanupEnc: 'Destroy repository and key',
 };
 
+const LOCAL_STAGES = [['source', 'Get the source'], ['runner', 'Prepare the local runner'], ['build', 'Run on this computer'], ['download', 'Collect outputs'], ['cleanup', 'Remove the working folder']];
+
 export function stagesFor(mode) {
+  if (mode === 'local') return LOCAL_STAGES.map(([id, label]) => ({ id, label, state: 'pending', detail: null }));
   const enc = mode === 'encrypted-public';
   const ids = enc
     ? ['key', 'encrypt', 'repo', 'commit', 'secret', 'dispatch', 'build', 'download', 'cleanup']
@@ -66,9 +71,11 @@ const LOG_CAP = 2 * 1024 * 1024;
 export class JobManager extends EventEmitter {
   constructor({
     getClient, makeClient = null, app = null, owner, dataDir, pollMs = 5000, ttlMs = 60 * 60 * 1000,
-    sleepImpl = sleep, keepRepoOnFailure = false, journal = true,
+    sleepImpl = sleep, keepRepoOnFailure = false, journal = true, local = null,
   }) {
     super();
+    this.local = local;
+    this.aborts = new Map();
     this.getClient = getClient;
     this.makeClient = makeClient;
     this.app = app;
@@ -159,6 +166,7 @@ export class JobManager extends EventEmitter {
 
   async stop() {
     this.stopped = true;
+    for (const a of this.aborts.values()) a.abort();
     clearInterval(this.heartbeat);
     await this.saving;
   }
@@ -174,6 +182,12 @@ export class JobManager extends EventEmitter {
       if (job.status === 'ready') {
         if (!job.expiresAt || job.expiresAt <= Date.now()) await this.expire(job.id);
         else setTimeout(() => this.expire(job.id), job.expiresAt - Date.now()).unref?.();
+      }
+      if (job.status === 'running' && job.mode === 'local') {
+        // A run on this computer dies with the app; it cannot be picked up again.
+        for (const st of job.stages) if (st.state === 'active' || st.state === 'pending') st.state = st.state === 'active' ? 'failed' : 'skipped';
+        Object.assign(job, { status: 'failed', error: 'The app stopped while this was running on this computer. Run it again.', updatedAt: Date.now() });
+        continue;
       }
       if (job.status === 'running') resumed.push(job);
     }
@@ -226,7 +240,7 @@ export class JobManager extends EventEmitter {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       status: 'running',
-      repo: `${enc ? PUBLIC_PREFIX : REPO_PREFIX}${id}`,
+      repo: request.mode === 'local' ? null : `${enc ? PUBLIC_PREFIX : REPO_PREFIX}${id}`,
       owner: null,
       runUrl: null,
       error: null,
@@ -242,7 +256,7 @@ export class JobManager extends EventEmitter {
     this.jobs.set(id, job);
     this.priv.set(id, { request, key: enc ? keygen() : null, phase: null });
     this.save();
-    const promise = this.drive(job, { resume: false }).catch(() => {});
+    const promise = (request.mode === 'local' ? this.driveLocal(job) : this.drive(job, { resume: false })).catch(() => {});
     Object.defineProperty(job, 'promise', { value: promise, enumerable: false, configurable: true });
     return this.view(job);
   }
@@ -385,6 +399,193 @@ export class JobManager extends EventEmitter {
       if (!(this.stopped && job.status === 'running' && !failed && !job.outputs?.length)) {
         await this.finish(job, { gh, revocable, owner, failed, mayHaveRepo });
       }
+    }
+  }
+
+  // ---------- local runs ----------
+  // Builds on this computer: scripts with the host's shell, workflows through
+  // the local runner program, Dockerfiles with the local Docker.
+  async driveLocal(job) {
+    const p = this.priv.get(job.id);
+    const req = p.request;
+    const local = this.local;
+    const base = join(this.dataDir, job.id);
+    const src = join(base, 'src');
+    const logPath = join(base, 'run.log');
+    const abort = new AbortController();
+    this.aborts.set(job.id, abort);
+    let failed = false;
+    let logSize = 0;
+    let logStream = null;
+    let lastEmit = 0;
+    const steps = [];
+    const write = (line) => {
+      if (logSize >= LOG_CAP) return;
+      const text = `${line}\n`;
+      logSize += Buffer.byteLength(text);
+      logStream.write(logSize > LOG_CAP ? '[the log was cut at 2 MB]\n' : text);
+      if (Date.now() - lastEmit > 1000) { lastEmit = Date.now(); this.update(job, { steps: steps.map((x) => ({ ...x })), log: { size: logSize, truncated: logSize >= LOG_CAP, live: true } }); }
+    };
+    const begin = (run, jobName, name) => { const st = { run, job: jobName, name, number: steps.length + 1, status: 'in_progress', conclusion: null, startedAt: Date.now(), completedAt: null }; steps.push(st); return st; };
+    const end = (st, ok) => Object.assign(st, { status: 'completed', conclusion: ok ? 'success' : 'failure', completedAt: Date.now() });
+    try {
+      if (!local) throw new Error('Local runs are not available on this server.');
+      await rm(base, { recursive: true, force: true });
+      await mkdir(src, { recursive: true });
+      logStream = createWriteStream(logPath);
+
+      // ---- source ----
+      this.stage(job, 'source', 'active');
+      if (req.kind === 'dockerfile') {
+        await writeFile(join(src, 'Dockerfile'), req.dockerfile);
+        for (const f of req.files) { await mkdir(dirname(join(src, f.path)), { recursive: true }); await writeFile(join(src, f.path), f.content); }
+        this.stage(job, 'source', 'done', `${req.files.length + 1} files`);
+      } else if (req.localPath) {
+        let info;
+        try { info = await stat(req.localPath); } catch { throw new Error(`The folder ${req.localPath} was not found on this computer.`); }
+        if (!info.isDirectory()) throw new Error(`${req.localPath} is not a folder.`);
+        await cp(req.localPath, src, { recursive: true, filter: (from) => !/[\\/]node_modules$|[\\/]\.git[\\/]objects[\\/]pack[\\/].*\.keep$/.test(from) });
+        this.stage(job, 'source', 'done', 'copied from this computer');
+      } else {
+        const user = await this.getClient();
+        const [o, r] = req.repo.split('/');
+        const commit = await user.getCommit(o, r, req.ref);
+        this.update(job, { sha: commit.sha });
+        const tarball = join(base, SOURCE_TARBALL);
+        await pipeline(Readable.fromWeb((await user.downloadTarball(o, r, commit.sha)).body), createWriteStream(tarball));
+        const code = await local.exec('tar', ['-xzf', tarball, '--strip-components=1', '-C', src], { onLine: write });
+        if (code !== 0) throw new Error('The source archive could not be unpacked.');
+        await rm(tarball, { force: true });
+        this.stage(job, 'source', 'done', `${req.repo} @ ${commit.sha.slice(0, 7)}`);
+      }
+
+      // ---- runner ----
+      this.stage(job, 'runner', 'active');
+      let caps = local.capabilities();
+      const plans = [];
+      let actPath = null;
+      if (req.kind === 'dockerfile') {
+        if (!caps.containers) throw new Error('Building a Docker image on this computer needs Docker, and Docker did not answer. Install or start Docker; it needs an administrator, so the app cannot install it for you.');
+        this.stage(job, 'runner', 'done', `Docker ${caps.containers.version}`);
+      } else {
+        for (const sc of req.scripts) local.scriptCommand(sc); // fail early with the reason
+        if (req.workflows.length) {
+          for (const w of req.workflows) {
+            let text;
+            try { text = await readFile(join(src, w), 'utf8'); } catch { throw new Error(`${w} was not found in the source.`); }
+            const plan = planWorkflow(text, caps);
+            const prepared = localWorkflow(text);
+            await writeFile(join(src, w), prepared.yaml);
+            plans.push({ file: w, name: workflowName(text, w), ...plan, removed: prepared.removed });
+          }
+          if (!plans.some((pl) => pl.runnable)) throw new Error(`None of the jobs can run on this computer. ${[...new Set(plans.flatMap((pl) => pl.jobs.map((j) => j.reason).filter(Boolean)))].join('; ')}.`);
+          if (!caps.act.installed) this.stage(job, 'runner', 'active', `getting the runner program (act ${caps.act.version})`);
+          actPath = await local.ensureAct((pr) => { if (pr.total) this.stage(job, 'runner', 'active', `getting the runner program · ${Math.round(pr.got / pr.total * 100)}%`); });
+          caps = local.capabilities();
+        }
+        const skipped = plans.flatMap((pl) => pl.jobs.filter((j) => !j.runnable || j.partial).map((j) => `${pl.name} / ${j.name}: ${j.reason}`));
+        const warnings = [...skipped.map((x) => `Not run here — ${x}.`), ...plans.flatMap((pl) => pl.removed.map((x) => `Publishing step removed — ${x}.`))];
+        if (caps.canRun.linux === 'host' && plans.length) warnings.push('No Docker: Linux jobs run directly on this computer, as you, with the tools it has.');
+        this.update(job, { warnings, localPlan: plans.map((pl) => ({ file: pl.file, name: pl.name, event: pl.event, jobs: pl.jobs })) });
+        this.stage(job, 'runner', 'done', [req.scripts.length ? 'host shell' : '', plans.length ? `act ${caps.act.version}${caps.containers ? ` · Docker ${caps.containers.version}` : ' · no containers'}` : ''].filter(Boolean).join(' · '));
+      }
+
+      // ---- build ----
+      this.stage(job, 'build', 'active');
+      const problems = [];
+      const artifactDir = join(base, 'artifacts');
+      if (req.kind === 'dockerfile') {
+        const tag = `mac-local-${job.id}`;
+        const st = begin('Docker build', 'docker', 'docker build');
+        const args = ['build', '--platform', req.platform, '-t', tag, ...Object.entries(req.buildArgs || {}).flatMap(([k, v]) => ['--build-arg', `${k}=${v}`]), '.'];
+        const code = await local.exec('docker', args, { cwd: src, onLine: write, signal: abort.signal });
+        end(st, code === 0);
+        if (code !== 0) throw new Error(`docker build ended with code ${code}.`);
+        const st2 = begin('Docker build', 'docker', 'docker save');
+        await mkdir(join(base, 'files'), { recursive: true });
+        const tar = join(base, 'files', 'image.tar');
+        const code2 = await local.exec('docker', ['save', '-o', tar, tag], { cwd: src, onLine: write, signal: abort.signal });
+        if (code2 === 0) { await pipeline(createReadStream(tar), createGzip(), createWriteStream(join(base, 'files', IMAGE_FILE))); await rm(tar, { force: true }); }
+        end(st2, code2 === 0);
+        await local.exec('docker', ['image', 'rm', '-f', tag], { onLine: () => {} }).catch(() => {});
+        if (code2 !== 0) throw new Error(`docker save ended with code ${code2}.`);
+      } else {
+        for (const sc of req.scripts) {
+          const { command, args } = local.scriptCommand(sc);
+          const st = begin('Build scripts', 'host', sc);
+          write(`=== Build scripts / ${sc} ===`);
+          this.stage(job, 'build', 'active', sc);
+          const code = await local.exec(command, args, { cwd: src, onLine: write, signal: abort.signal });
+          end(st, code === 0);
+          if (code !== 0) { problems.push(`${sc} ended with code ${code}.`); break; }
+        }
+        for (const pl of problems.length ? [] : plans) {
+          if (!pl.runnable) continue;
+          write(`=== ${pl.name} ===`);
+          this.stage(job, 'build', 'active', pl.name);
+          const conf = join(base, 'actconf');
+          const args = actArgs({ event: pl.event, workflow: pl.file, artifactDir, caps });
+          await mkdir(join(conf, 'act'), { recursive: true });
+          await writeFile(join(conf, 'act', 'actrc'), `${args.filter((_, i) => args[i - 1] === '-P').map((x) => `-P ${x}`).join('\n')}\n`);
+          const open = new Map();
+          const code = await local.exec(actPath, args, {
+            cwd: src, signal: abort.signal, env: local.runEnv({ XDG_CONFIG_HOME: conf, ACT_DISABLE_VERSION_CHECK: '1' }),
+            onLine: (line) => {
+              write(line);
+              const ev = parseActLine(line);
+              if (!ev || ev.phase === 'Complete') return;
+              const key = `${ev.job}|${ev.phase}|${ev.name}`;
+              if (ev.kind === 'start') open.set(key, begin(pl.name, ev.job, ev.phase === 'Main' ? ev.name : `${ev.phase} ${ev.name}`));
+              else if (open.has(key)) { end(open.get(key), ev.kind === 'success'); open.delete(key); }
+            },
+          });
+          for (const st of open.values()) end(st, false);
+          if (code !== 0) problems.push(`${pl.name} ended with code ${code}.`);
+        }
+      }
+      if (abort.signal.aborted) throw new Error('The run was stopped.');
+      const ranSomething = req.kind === 'dockerfile' || req.scripts.length + plans.filter((pl) => pl.runnable).length;
+      if (problems.length && (problems.length >= ranSomething || req.scripts.length)) { this.stage(job, 'build', 'failed', problems.join(' ')); throw new Error(problems.join(' ')); }
+      this.stage(job, 'build', problems.length ? 'failed' : 'done', problems.length ? problems.join(' ') : 'success');
+
+      // ---- outputs ----
+      this.stage(job, 'download', 'active');
+      const filesDir = join(base, 'files');
+      await mkdir(filesDir, { recursive: true });
+      let outputs = [];
+      if (req.kind === 'dockerfile') outputs = [{ name: IMAGE_FILE, size: (await stat(join(filesDir, IMAGE_FILE))).size, file: IMAGE_FILE }];
+      else {
+        if (req.scripts.length) {
+          for (const rel of await findFiles(src, req.outputs)) {
+            const dest = join(filesDir, rel);
+            await mkdir(dirname(dest), { recursive: true });
+            await cp(join(src, rel), dest);
+            outputs.push({ name: rel, size: (await stat(dest)).size, file: rel });
+          }
+        }
+        for (const a of await collectArtifacts(artifactDir, filesDir)) outputs.push({ name: a.name, size: a.size, file: a.name });
+      }
+      if (!outputs.length) throw new Error(req.scripts?.length ? `The run finished but no file matched the output patterns (${req.outputs.join(', ')}).` : 'The run finished but uploaded no artifacts.');
+      this.stage(job, 'download', 'done', `${outputs.length} file${outputs.length === 1 ? '' : 's'} · ${formatBytes(outputs.reduce((n, o) => n + o.size, 0))}`);
+      this.update(job, { outputs, error: problems.length ? problems.join(' ') : null });
+    } catch (err) {
+      failed = true;
+      const active = job.stages.find((st) => st.state === 'active');
+      if (active) this.stage(job, active.id, 'failed', err.message);
+      this.update(job, { error: err.message });
+    } finally {
+      this.aborts.delete(job.id);
+      await new Promise((r) => { if (logStream) logStream.end(r); else r(); });
+      this.stage(job, 'cleanup', 'active');
+      await rm(src, { recursive: true, force: true }).catch(() => {});
+      await rm(join(base, 'artifacts'), { recursive: true, force: true }).catch(() => {});
+      await rm(join(base, 'actconf'), { recursive: true, force: true }).catch(() => {});
+      this.stage(job, 'cleanup', 'done', 'Working folder removed');
+      for (const st of job.stages) if (st.state === 'pending' || st.state === 'active') st.state = 'skipped';
+      const ready = !failed && job.outputs?.length > 0;
+      p.request = undefined;
+      this.update(job, { steps: steps.map((x) => ({ ...x })), log: logSize ? { size: logSize, truncated: logSize >= LOG_CAP } : null, status: ready ? 'ready' : 'failed', expiresAt: ready ? Date.now() + this.ttlMs : null });
+      if (ready) setTimeout(() => this.expire(job.id), this.ttlMs).unref?.();
     }
   }
 

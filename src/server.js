@@ -1,9 +1,9 @@
 import http from 'node:http';
 import { execFile } from 'node:child_process';
 import { createReadStream } from 'node:fs';
-import { readFile, writeFile, rm } from 'node:fs/promises';
+import { readFile, writeFile, rm, stat, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, extname, normalize, dirname } from 'node:path';
+import { join, extname, normalize, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { timingSafeEqual, randomUUID } from 'node:crypto';
 import { GitHubClient } from './github.js';
@@ -14,6 +14,7 @@ import { GitHubApp } from './githubapp.js';
 import { transformWorkflow, workflowName } from './transform.js';
 import { ExtensionHost } from './extensions.js';
 import { RecipeBook } from './recipes.js';
+import { LocalRunner, planWorkflow } from './local.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const PUBLIC_DIR = join(ROOT, 'public');
@@ -50,6 +51,9 @@ export async function provenance(env = process.env) {
   return { version: pkg.version, commit: commit ? commit.slice(0, 12) : null, updatedAt, source: env.MAC_COMMIT ? 'build' : commit ? 'git' : 'unknown' };
 }
 
+// A local build of a folder or a Dockerfile never talks to GitHub.
+const needsGitHub = (request) => !(request.mode === 'local' && (request.localPath || request.kind === 'dockerfile'));
+
 export function createApp(opts = {}) {
   const env = opts.env || process.env;
   const ghAuth = opts.ghAuth || new GhAuth({ env });
@@ -70,7 +74,9 @@ export function createApp(opts = {}) {
   }
 
   const githubApp = opts.githubApp !== undefined ? opts.githubApp : GitHubApp.fromEnv(env);
+  const local = opts.local || new LocalRunner({ toolsDir: join(env.DATA_DIR || join(ROOT, 'data'), 'tools'), env });
   const jobs = opts.jobs || new JobManager({
+    local,
     getClient,
     makeClient,
     app: githubApp,
@@ -89,7 +95,7 @@ export function createApp(opts = {}) {
   });
   const recipes = opts.recipes || new RecipeBook({
     file: join(dataDir, 'recipes.json'), validate: validateRequest,
-    start: async (request) => { await getClient(); return jobs.create(request); },
+    start: async (request) => { if (needsGitHub(request)) await getClient(); return jobs.create(request); },
   });
   const recipesReady = recipes.load().then(() => { if (opts.recipeClock !== false) recipes.startClock(); }).catch(() => {});
   const extensionList = async () => ({ ...extensions.list(), userDir: join(dataDir, 'extensions'), gallery: await extensions.gallery() });
@@ -189,6 +195,11 @@ export function createApp(opts = {}) {
         try {
           const raw = await gh.getContents(o, r, path, ref);
           const text = Buffer.from(raw.content || '', 'base64').toString('utf8');
+          if (url.searchParams.get('mode') === 'local') {
+            const plan = planWorkflow(text, local.capabilities());
+            workflows.push({ path, name: workflowName(text, path), dispatchable: plan.runnable > 0, warnings: plan.jobs.filter((j) => !j.runnable || j.partial).map((j) => `Not run here — ${j.name}: ${j.reason}.`), jobs: plan.jobs });
+            continue;
+          }
           const t = transformWorkflow(text, { mode: url.searchParams.get('mode') || 'encrypted-public', file: path });
           workflows.push({ path, name: workflowName(text, path), dispatchable: t.dispatchable, warnings: t.warnings });
         } catch (err) {
@@ -196,6 +207,45 @@ export function createApp(opts = {}) {
         }
       }
       return json(res, 200, { repo, ref, defaultBranch: info.default_branch, private: info.private, scripts, workflows, outputsGuess: guess, truncated: Boolean(tree.truncated) });
+    }
+    if (pathname === '/api/local' && req.method === 'GET') return json(res, 200, local.capabilities());
+    if (pathname === '/api/local/install' && req.method === 'POST') {
+      await local.ensureAct();
+      return json(res, 200, local.capabilities());
+    }
+    if (pathname === '/api/local/scan' && req.method === 'GET') {
+      const folder = (url.searchParams.get('path') || '').trim();
+      if (!folder || !isAbsolute(folder)) throw new ValidationError('Give the full path of a folder on this computer.');
+      let info;
+      try { info = await stat(folder); } catch { return json(res, 404, { error: 'That folder was not found on this computer.' }); }
+      if (!info.isDirectory()) throw new ValidationError('That path is not a folder.');
+      const scripts = [];
+      const walk = async (dir, rel, depth) => {
+        if (depth > 6 || scripts.length >= 200) return;
+        let entries = [];
+        try { entries = await readdir(dir, { withFileTypes: true }); } catch { return; }
+        for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+          if (e.isSymbolicLink() || ['node_modules', '.git', 'dist', 'target', 'vendor'].includes(e.name)) continue;
+          const r = rel ? `${rel}/${e.name}` : e.name;
+          if (e.isDirectory()) await walk(join(dir, e.name), r, depth + 1);
+          else if (/\.(bat|cmd|ps1|sh)$/i.test(e.name) && scripts.length < 200) scripts.push(r);
+        }
+      };
+      await walk(folder, '', 0);
+      const caps = local.capabilities();
+      const workflows = [];
+      let names = [];
+      try { names = (await readdir(join(folder, '.github', 'workflows'))).filter((n) => /\.ya?ml$/.test(n)).sort().slice(0, 30); } catch { /* none */ }
+      for (const n of names) {
+        const path = `.github/workflows/${n}`;
+        try {
+          const text = await readFile(join(folder, path), 'utf8');
+          const plan = planWorkflow(text, caps);
+          const cannot = plan.jobs.filter((j) => !j.runnable || j.partial).map((j) => `${j.name}: ${j.reason}`);
+          workflows.push({ path, name: workflowName(text, path), dispatchable: plan.runnable > 0, warnings: cannot.map((c) => `Not run here — ${c}.`), jobs: plan.jobs });
+        } catch (err) { workflows.push({ path, name: n, dispatchable: false, warnings: [err.message] }); }
+      }
+      return json(res, 200, { repo: null, localPath: folder, ref: 'HEAD', scripts, workflows, outputsGuess: 'dist/**', truncated: scripts.length >= 200 });
     }
     if (pathname === '/api/recovery' && req.method === 'GET') return json(res, 200, jobs.recoveryView());
     if (pathname === '/api/recovery/dismiss' && req.method === 'POST') { jobs.dismissRecovery(); return json(res, 200, { ok: true }); }
@@ -221,7 +271,7 @@ export function createApp(opts = {}) {
     if (pathname === '/api/builds' && req.method === 'GET') return json(res, 200, jobs.list());
     if (pathname === '/api/builds' && req.method === 'POST') {
       const request = validateRequest(await body(req));
-      await getClient(); // fail fast when signed out
+      if (needsGitHub(request)) await getClient(); // fail fast when signed out
       return json(res, 202, jobs.create(request));
     }
     if (pathname === '/api/recipes' && req.method === 'GET') { await recipesReady; return json(res, 200, { recipes: recipes.list() }); }

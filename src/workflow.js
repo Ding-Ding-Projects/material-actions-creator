@@ -1,3 +1,4 @@
+import { isAbsolute, basename } from 'node:path';
 // Validates build requests and generates the workflow + files committed to the
 // temporary repository. Two kinds of build:
 //   - "dockerfile": Dockerfile instructions in, Docker image (.tar.gz) out
@@ -9,7 +10,7 @@
 
 export const PLATFORMS = ['linux/amd64', 'linux/arm64', 'linux/arm/v7', 'linux/386', 'linux/ppc64le', 'linux/s390x'];
 export const RUNNERS = ['windows-latest', 'windows-2025', 'windows-2022', 'windows-11-arm', 'ubuntu-latest', 'ubuntu-24.04-arm', 'macos-latest'];
-export const MODES = ['private', 'encrypted-public'];
+export const MODES = ['private', 'encrypted-public', 'local'];
 export const KINDS = ['dockerfile', 'scripts'];
 export const WORKFLOW_FILE = 'mac-build.yml';
 export const ARTIFACT_NAME = 'mac-output';
@@ -90,7 +91,14 @@ function validateDockerfile(body) {
 }
 
 function validateScripts(body) {
-  const repo = String(body.repo || '').trim().replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '');
+  // A local run may build a folder on this computer instead of a repository.
+  let localPath = null;
+  if (body.localPath !== undefined && body.localPath !== null && String(body.localPath).trim()) {
+    if ((body.mode || 'private') !== 'local') throw new ValidationError('A folder on this computer can only be built in local mode.');
+    localPath = String(body.localPath).trim();
+    if (localPath.length > 1000 || /[\r\n\0]/.test(localPath) || !isAbsolute(localPath)) throw new ValidationError('The folder must be a full path on this computer.');
+  }
+  const repo = localPath ? `local/${basename(localPath).replace(/[^A-Za-z0-9._-]/g, '-').slice(0, 100) || 'folder'}` : String(body.repo || '').trim().replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '');
   if (!REPO_RE.test(repo)) throw new ValidationError('Repository must look like owner/name.');
   const ref = String(body.ref || '').trim() || 'HEAD';
   if (!REF_RE.test(ref) || ref.includes('..')) throw new ValidationError('Invalid branch, tag or commit.');
@@ -107,7 +115,7 @@ function validateScripts(body) {
   if (scripts.length > 20) throw new ValidationError('At most 20 build scripts.');
   for (const s of scripts) {
     if (!SCRIPT_RE.test(s) || s.split(/[\\/]/).includes('..') || /^[\\/]/.test(s)) throw new ValidationError(`Invalid script path: ${s}`);
-    if (/\.(bat|cmd)$/i.test(s) && !runner.startsWith('windows')) throw new ValidationError(`${s} needs a Windows runner.`);
+    if (/\.(bat|cmd)$/i.test(s) && !runner.startsWith('windows') && body.mode !== 'local') throw new ValidationError(`${s} needs a Windows runner.`);
   }
   const outputs = (Array.isArray(body.outputs) ? body.outputs : String(body.outputs || '').split(/[\n,]/)).map((g) => g.trim()).filter(Boolean);
   if (scripts.length && !outputs.length) throw new ValidationError('Say which files are the outputs (for example dist/**/*.exe).');
@@ -116,7 +124,7 @@ function validateScripts(body) {
   }
   const name = String(body.name || '').trim() || `${repo.split('/')[1]} build`;
   if (name.length > 80 || /[\r\n]/.test(name)) throw new ValidationError('Name is too long.');
-  return { kind: 'scripts', mode: validateMode(body), repo, ref, runner, scripts, workflows, outputs, name };
+  return { kind: 'scripts', mode: validateMode(body), repo, ref, runner, scripts, workflows, outputs, name, ...(localPath ? { localPath } : {}) };
 }
 
 export function validateRequest(body) {
@@ -265,6 +273,10 @@ export function describe(req) {
   const parts = [];
   if (req.scripts?.length) parts.push(req.runner);
   if (req.workflows?.length) parts.push(`${req.workflows.length} workflow${req.workflows.length === 1 ? '' : 's'}`);
+  if (req.mode === 'local' && req.kind === 'scripts') {
+    const what = [req.scripts?.length ? `${req.scripts.length} script${req.scripts.length === 1 ? '' : 's'}` : '', req.workflows?.length ? `${req.workflows.length} workflow${req.workflows.length === 1 ? '' : 's'}` : ''].filter(Boolean).join(' + ');
+    return { title: req.name, subtitle: `${req.localPath || `${req.repo} @ ${req.ref}`} → ${what} on this computer` };
+  }
   return req.kind === 'scripts'
     ? { title: req.name, subtitle: `${req.repo} @ ${req.ref} → ${parts.join(' + ')}` }
     : { title: req.imageName, subtitle: req.platform };

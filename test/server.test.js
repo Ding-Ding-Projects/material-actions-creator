@@ -1,6 +1,6 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { EventEmitter } from 'node:events';
@@ -128,7 +128,7 @@ test('encrypted script build through the API lists decrypted outputs', async () 
   assert.match(dl.headers.get('content-disposition'), /filename="Setup-1\.0\.msi"/);
   const cfg = await (await call('/api/config')).json();
   assert.ok(cfg.runners.includes('windows-latest'));
-  assert.deepEqual(cfg.modes, ['private', 'encrypted-public']);
+  assert.deepEqual(cfg.modes, ['private', 'encrypted-public', 'local']);
   assert.equal((await (await call('/api/recovery')).json()), null);
 });
 
@@ -191,4 +191,32 @@ test('recipes API: save, list, run starts a build, delete', async () => {
   const list = await (await call('/api/recipes')).json();
   assert.deepEqual(list.recipes.map((r) => r.name), ['Installer nightly']);
   assert.deepEqual((await (await call(`/api/recipes/${saved.id}`, { method: 'DELETE' })).json()).recipes, []);
+});
+
+test('local API: capabilities, folder scan, and a local build with no sign-in', async () => {
+  assert.equal((await fetch(base + '/api/local')).status, 401);
+  const caps = await (await call('/api/local')).json();
+  assert.ok(['linux', 'windows', 'macos'].includes(caps.host));
+  assert.equal(caps.act.version, '0.2.98');
+  assert.equal(typeof caps.canRun.linux === 'string' || caps.canRun.linux === false, true);
+  if (process.platform === 'win32') return;
+  const project = await mkdtemp(join(tmpdir(), 'api-local-'));
+  await mkdir(join(project, '.github', 'workflows'), { recursive: true });
+  await mkdir(join(project, 'node_modules', 'x'), { recursive: true });
+  await writeFile(join(project, 'node_modules', 'x', 'ignored.sh'), 'exit 1\n');
+  await writeFile(join(project, 'build.sh'), 'mkdir -p dist && echo ok > dist/out.txt\n');
+  await writeFile(join(project, '.github', 'workflows', 'ci.yml'), 'on: push\njobs:\n  win:\n    runs-on: windows-latest\n    steps:\n      - run: echo hi\n');
+  const scan = await (await call(`/api/local/scan?path=${encodeURIComponent(project)}`)).json();
+  assert.deepEqual(scan.scripts, ['build.sh']);
+  assert.equal(scan.workflows[0].path, '.github/workflows/ci.yml');
+  if (process.platform !== 'win32') assert.match(scan.workflows[0].warnings[0], /Windows jobs need a Windows computer/);
+  assert.equal((await call('/api/local/scan?path=relative')).status, 400);
+  assert.equal((await call(`/api/local/scan?path=${encodeURIComponent(join(project, 'nope'))}`)).status, 404);
+  const created = await (await call('/api/builds', { method: 'POST', body: { kind: 'scripts', mode: 'local', localPath: project, scripts: ['build.sh'], outputs: 'dist/**' } })).json();
+  assert.equal(created.mode, 'local');
+  let job;
+  for (let i = 0; i < 100; i++) { job = await (await call(`/api/builds/${created.id}`)).json(); if (job.status !== 'running') break; await new Promise((r) => setTimeout(r, 50)); }
+  assert.equal(job.status, 'ready', job.error);
+  assert.equal(await (await call(job.outputs[0].url)).text(), 'ok\n');
+  assert.match(await (await call(job.logUrl)).text(), /=== Build scripts \/ build\.sh ===/);
 });
