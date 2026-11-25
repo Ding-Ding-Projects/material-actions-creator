@@ -17,6 +17,10 @@ Source of truth for the hosted design canvas "Material Actions Creator — UI". 
 | GitHub CLI login | `SignIn.dc.html` | accent, motion | Assisted device-code sign-in |
 | mac CLI | `Cli.dc.html` | accent, motion | Assisted login and an encrypted build in the terminal |
 | Docs site | `Docs.dc.html` | accent, motion | Docs hero and how it works |
+| App shell — tabs, palette, menus | `Shell.dc.html` | accent, motion, stage | Every tab open, springing active underline, live palette, context menu |
+| Setup wizard, tour and personal wording | `Onboarding.dc.html` | accent, motion, step | Five-step wizard with Back/Next/Skip, then the tour coach card |
+| Setup wizard, tour and personal wording | `Vocab.dc.html` | accent, motion, stage | Personal wording before/after, window drop zone, celebration burst |
+| Records — completeness and history | `Records.dc.html` | accent, motion, filter | Completeness meter and filters beside notifications and settings history |
 
 `accent` is the shared colour lever (default `#d4ff3a`, same name and default on every board). `motion` stills every animation and transition on the board: the drifting background orbs, the entrance rise, the flowing active progress segment, the pulsing live dots, the blinking terminal cursor and the hover lifts. Reduced-motion settings also still everything.
 
@@ -39,3 +43,7 @@ Findings from those frames and their state:
 - Loading, empty, offline and error stages for every board (only the main stages are drawn).
 - Phone-width versions of the Workflows and Runs boards.
 - A board for the sub-run chips and workflow-change list as shown on a run card.
+
+## Pass 2026-11-24 — app shell
+
+New boards above. Motion per board: Shell — springing tab underline, palette pop-in, blinking caret; Onboarding — growing progress bars, pulsing tour ring, flowing dashed pointer; Vocab — drop zone pop-in, 24-piece burst and spring headline; Records — meter grows from the left, rows rise in sequence. All stilled by the motion Tweak and reduced motion. The app ships the same motion in `public/css/shell.css`. These boards were made after the matching code in this pass rather than before it, and were not rendered as frames before publishing.

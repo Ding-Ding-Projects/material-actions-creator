@@ -33,6 +33,18 @@
   {
    "id": "docs-site",
    "name": "Docs site"
+  },
+  {
+   "id": "shell",
+   "name": "App shell — tabs, palette, menus"
+  },
+  {
+   "id": "setup",
+   "name": "Setup wizard, tour and personal wording"
+  },
+  {
+   "id": "records",
+   "name": "Records — completeness and history"
   }
  ],
  "boards": {
@@ -116,6 +128,46 @@
    "title": "Docs site — hero + how it works",
    "page": "docs-site",
    "expand": "fill"
+  },
+  "Shell.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Every tab open + Ctrl+Shift+F palette",
+   "page": "shell",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Onboarding.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 820,
+   "title": "Setup wizard → Take a tour",
+   "page": "setup",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Vocab.dc.html": {
+   "x": 1940,
+   "y": 0,
+   "w": 1440,
+   "h": 860,
+   "title": "Personal wording — even failure text",
+   "page": "setup",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Records.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Completeness inventory + history",
+   "page": "records",
+   "expand": "fill",
+   "is_interactive": true
   }
  },
  "order": [
@@ -127,7 +179,11 @@
   "Main.dc.html",
   "SignIn.dc.html",
   "Cli.dc.html",
-  "Docs.dc.html"
+  "Docs.dc.html",
+  "Shell.dc.html",
+  "Onboarding.dc.html",
+  "Vocab.dc.html",
+  "Records.dc.html"
  ],
  "notes": {
   "title-workflows": {
@@ -249,6 +305,58 @@
    "text": "Docs site hero and how-it-works. Tweaks: accent, motion. Live Docs site waits on GitHub Pages being turned on. Unbuilt: CLI and repository-workflow sections on this board (they exist in the real docs/).",
    "fill": "yellow",
    "page": "docs-site"
+  },
+  "title-shell": {
+   "x": 0,
+   "y": -300,
+   "text": "App shell — tabs, palette, menus",
+   "kind": "title1",
+   "maxW": 1820,
+   "page": "shell"
+  },
+  "title-setup": {
+   "x": 0,
+   "y": -300,
+   "text": "Setup wizard, tour and personal wording",
+   "kind": "title1",
+   "maxW": 3760,
+   "page": "setup"
+  },
+  "title-records": {
+   "x": 0,
+   "y": -300,
+   "text": "Records — completeness and history",
+   "kind": "title1",
+   "maxW": 1820,
+   "page": "records"
+  },
+  "note-Shell": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "Tab strip with every page open, an active underline that springs between tabs, the Ctrl+Shift+F palette with live setting controls, and the context menu with its shortcuts. Try: click tabs; the search button toggles the palette. Tweaks: accent, motion, stage (palette/tabs). Stands for public/js/ui/tabs.js, palette.js and menu.js. Not shown: drag-reorder animation, catalog menu, pinned tabs. These boards were added after the code in this pass.",
+   "page": "shell"
+  },
+  "note-Onboarding": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "Five-step setup wizard (language, GitHub check, default run mode, personal wording, ready) with Back, Next and Skip, then the Take a tour coach card with a pulsing ring on the real tab. Try: Back/Next. Tweaks: accent, motion, step. Stands for public/js/ui/onboarding.js. Not verified: screen-reader pass; tour steps on narrow screens.",
+   "page": "setup"
+  },
+  "note-Vocab": {
+   "x": 3420,
+   "y": 0,
+   "w": 340,
+   "text": "Personal wording: the JSON, the same failed build before and after, the window-wide drop zone and the celebration burst. Try: idle/dragging/applied. Tweaks: accent, motion, stage. Stands for vocab.js, settings.js loadVocabFile and the drop handler in app.js. Checked in headless Chrome: failure text and server text are rewritten and nothing reaches settings history.",
+   "page": "setup"
+  },
+  "note-Records": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "Completeness page (125 features: 36 done, 28 partial, 49 not built, 12 not applicable, with filters) beside the History tab (notifications plus settings changes with Restore). Try: the status filter. Tweaks: accent, motion, filter. Stands for views/info.js, public/completeness.json and test/completeness.test.js. Rows are a sample.",
+   "page": "records"
   }
  },
  "designSystems": []

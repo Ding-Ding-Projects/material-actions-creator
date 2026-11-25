@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Completeness and history</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#d4ff3a}a:hover{color:#eaff8f}
+@keyframes macpulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes macrise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes macflow{from{background-position:0% 50%}to{background-position:200% 50%}}
+@keyframes macorb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,-40px) scale(1.18)}}
+@keyframes macorb2{0%,100%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-70px,50px) scale(.9)}}
+.mac-orb{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:-1}
+[data-motion="on"] .mac-orb{animation:macorb 14s ease-in-out infinite}
+[data-motion="on"] .mac-orb + .mac-orb{animation:macorb2 18s ease-in-out infinite}
+[data-motion="on"] section,[data-motion="on"] article,[data-motion="on"] aside,[data-motion="on"] [role="dialog"]{animation:macrise .8s cubic-bezier(.2,.9,.1,1) both}
+[data-motion="on"] section:nth-of-type(2),[data-motion="on"] article:nth-of-type(2),[data-motion="on"] aside{animation-delay:.12s}
+[data-motion="on"] article:nth-of-type(3){animation-delay:.24s}
+[data-motion="on"] button,[data-motion="on"] a,[data-motion="on"] label{transition:transform .3s cubic-bezier(.2,.9,.1,1),filter .25s,background .25s,border-color .25s,box-shadow .3s}
+[data-motion="on"] button:hover,[data-motion="on"] a:hover{transform:translateY(-2px);filter:brightness(1.08)}
+[data-motion="off"] *,[data-motion="off"] *::before,[data-motion="off"] *::after{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+@keyframes macpop{from{opacity:0;transform:scale(.9) translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes macink{from{transform:scaleX(.15)}to{transform:none}}
+@keyframes macgrow{from{transform:scaleX(0)}to{transform:none}}
+@keyframes macburst{from{opacity:1;transform:rotate(var(--a)) translateY(0)}to{opacity:0;transform:rotate(var(--a)) translateY(-260px) rotate(220deg)}}
+@keyframes maclevel{0%{opacity:0;transform:scale(.4) rotate(-6deg)}20%{opacity:1;transform:scale(1.08) rotate(2deg)}32%{transform:none}100%{opacity:1}}
+@keyframes macring{0%,100%{box-shadow:0 0 0 4px var(--acc),0 0 0 9999px rgba(5,6,9,.5)}50%{box-shadow:0 0 0 8px var(--acc),0 0 0 9999px rgba(5,6,9,.5)}}
+@keyframes macdash{to{stroke-dashoffset:-24}}
+[data-motion="on"] .mac-pop{animation:macpop .45s cubic-bezier(.34,1.56,.64,1) both}
+[data-motion="on"] .mac-ink{animation:macink .5s cubic-bezier(.34,1.56,.64,1) both;transform-origin:center}
+[data-motion="on"] .mac-grow{animation:macgrow 1.1s cubic-bezier(.2,.9,.1,1) both;transform-origin:left}
+[data-motion="on"] .mac-burst i{animation:macburst 1.6s cubic-bezier(.2,.9,.1,1) infinite}
+[data-motion="on"] .mac-level{animation:maclevel 1.2s cubic-bezier(.34,1.56,.64,1) both}
+[data-motion="on"] .mac-ring{animation:macring 1.6s ease-in-out infinite}
+[data-motion="on"] .mac-dash{animation:macdash 1s linear infinite}
+[data-motion="on"] li{animation:macrise .6s cubic-bezier(.2,.9,.1,1) both}
+</style>
+</helmet>
+<div data-motion="{{motionFlag}}" style="--acc: {{accent}}; isolation: isolate; width: 1440px; height: 900px; box-sizing: border-box; background: #0b0c10; color: #eef0f6; font-family: 'Bricolage Grotesque', system-ui, sans-serif; position: relative; overflow: hidden">
+<div class="mac-orb" aria-hidden="true" style="width: 560px; height: 560px; left: -180px; top: -220px; background: {{accent}}; opacity: .14"></div><div class="mac-orb" aria-hidden="true" style="width: 480px; height: 480px; right: -160px; top: 120px; background: #b69cff; opacity: .16"></div>
+
+<div style="padding: 48px 56px; display: grid; grid-template-columns: 1.35fr 1fr; gap: 32px; height: 100%; box-sizing: border-box">
+  <section>
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #8d93a8; margin: 0 0 10px">Completeness</p>
+    <h2 style="font-size: 52px; letter-spacing: -.04em; line-height: .95; margin: 0 0 18px">Nothing rounded up.</h2>
+    <div style="display: flex; height: 14px; border-radius: 99px; overflow: hidden; background: #232733"><sc-for list="{{meter}}" as="m" hint-placeholder-count="4"><i class="mac-grow" style="{{m.style}}"></i></sc-for></div>
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; margin: 10px 0 18px">{{summary}}</p>
+    <div style="display: flex; gap: 4px; margin-bottom: 16px; padding: 4px; border-radius: 14px; border: 1px solid #2c3140; width: fit-content"><sc-for list="{{filters}}" as="f" hint-placeholder-count="5"><button type="button" onClick="{{f.pick}}" aria-checked="{{f.on}}" role="radio" style="min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: {{f.bg}}; color: {{f.color}}; font: 600 13px 'JetBrains Mono', monospace">{{f.label}}</button></sc-for></div>
+    <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 8px"><sc-for list="{{rows}}" as="r" hint-placeholder-count="6"><li style="background: #12141b; border: 1px solid #2c3140; border-radius: 22px; border-radius: 16px; display: flex; gap: 14px; align-items: start; padding: 12px 14px; animation-delay: {{r.delay}}"><span style="{{r.badge}}">{{r.status}}</span><div><div style="font-weight: 700">{{r.title}} <code style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8d93a8">{{r.id}}</code></div><div style="font-size: 13px; color: #a7adc0; margin-top: 3px">{{r.note}}</div></div></li></sc-for></ul>
+  </section>
+  <section>
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #8d93a8; margin: 0 0 10px">History · notifications and settings</p>
+    <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 8px"><sc-for list="{{notes}}" as="n" hint-placeholder-count="5"><li style="background: #12141b; border: 1px solid #2c3140; border-radius: 22px; border-radius: 16px; display: flex; gap: 12px; padding: 12px 14px"><span style="width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; flex: none; background: {{n.dot}}"></span><div style="flex: 1"><div>{{n.text}}</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8d93a8; margin-top: 2px">{{n.meta}}</div></div><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{n.actionColor}}">{{n.action}}</span></li></sc-for></ul>
+  </section>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent": {"editor": "color", "default": "#d4ff3a", "options": ["#d4ff3a", "#7cf5c8", "#b69cff", "#ff9e7a"], "section": "Look"}, "motion": {"editor": "boolean", "default": true, "section": "Look"}, "filter": {"editor": "select", "default": "all", "options": ["all", "done", "partial", "missing", "na"], "section": "Stage"}, "$preview": {"width": 1440, "height": 900}}'>
+class Component extends DCLogic {
+
+  constructor(p) { super(p); this.state = { filter: null }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#d4ff3a';
+    const motion = this.props.motion ?? true;
+    const filter = this.state.filter ?? (this.props.filter ?? 'all');
+    const C = { done: ['#7cf5c8', 'rgba(124,245,200,.15)'], partial: ['#ffc857', 'rgba(255,200,87,.15)'], missing: ['#ff7a6b', 'rgba(255,122,107,.15)'], na: ['#8d93a8', '#232733'] };
+    const counts = { done: 36, partial: 28, missing: 49, na: 12 };
+    const meter = Object.entries(counts).map(([k, n]) => ({ style: 'flex:' + n + ';background:' + (k === 'done' ? C.done[0] : C[k][0]) }));
+    const all = [
+      ['done', 'Ctrl+Shift+F command palette', 'command-palette', 'Pages, commands and live setting controls, with teleport.'],
+      ['done', 'Local personal vocabulary upload', 'personal-vocabulary', 'Validated, local-only, applied to every string and server message.'],
+      ['partial', 'Dim sum surprise', 'dim-sum', 'Photo source not reachable yet; shows an honest unavailable state.'],
+      ['partial', 'School mode', 'school-mode', 'Forces the most serious tone; no content filter yet.'],
+      ['missing', 'Dockable workspace', 'dockview-workspace', 'Not built; tabs only.'],
+      ['missing', 'Live charts', 'live-charts', 'Run timing charts are not built.'],
+      ['na', 'Browser-extension download hand-off', 'download-handoff', 'There is no browser extension.'],
+    ];
+    const rows = all.filter((r) => filter === 'all' || r[0] === filter).map(([status, title, id, note], i) => ({ status: { done: 'Done', partial: 'Partial', missing: 'Not built', na: 'N/A' }[status], title, id, note, delay: i * 60 + 'ms',
+      badge: 'flex:none;min-width:92px;text-align:center;font:700 11px JetBrains Mono,monospace;text-transform:uppercase;padding:5px 8px;border-radius:99px;color:' + C[status][0] + ';background:' + C[status][1] }));
+    const filters = ['all', 'done', 'partial', 'missing', 'na'].map((id) => ({ label: { all: 'All', done: 'Done', partial: 'Partial', missing: 'Not built', na: 'N/A' }[id], on: id === filter ? 'true' : 'false', bg: id === filter ? accent : 'transparent', color: id === filter ? '#141a00' : '#8d93a8', pick: () => this.setState({ filter: id }) }));
+    const notes = [
+      ['Build ready: map-editor installer', 'notification · 7:41 PM', '#7cf5c8', '×', '#8d93a8'],
+      ['The workflow run failed.', 'notification · 7:12 PM · step 3 of build.bat', '#ff7a6b', '×', '#8d93a8'],
+      ['theme → "light"', 'setting · 6:58 PM · user', '#b69cff', 'Restore', accent],
+      ['textScale → 110', 'setting · 6:57 PM · palette', '#b69cff', 'Restore', accent],
+      ['schedule: theme dark at 22:00', 'setting · 6:40 PM · schedule', '#b69cff', 'Restore', accent],
+    ].map(([text, meta, dot, action, actionColor]) => ({ text, meta, dot, action, actionColor }));
+    return { accent, motionFlag: motion ? 'on' : 'off', meter, rows, filters, notes, summary: '36 done · 28 partial · 49 not built · 12 not applicable — of 125' };
+  }
+}
+</script>
+</body>
+</html>

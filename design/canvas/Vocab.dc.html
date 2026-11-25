@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Personal wording</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#d4ff3a}a:hover{color:#eaff8f}
+@keyframes macpulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes macrise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes macflow{from{background-position:0% 50%}to{background-position:200% 50%}}
+@keyframes macorb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,-40px) scale(1.18)}}
+@keyframes macorb2{0%,100%{transform:translate(0,0) scale(1.1)}50%{transform:translate(-70px,50px) scale(.9)}}
+.mac-orb{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:-1}
+[data-motion="on"] .mac-orb{animation:macorb 14s ease-in-out infinite}
+[data-motion="on"] .mac-orb + .mac-orb{animation:macorb2 18s ease-in-out infinite}
+[data-motion="on"] section,[data-motion="on"] article,[data-motion="on"] aside,[data-motion="on"] [role="dialog"]{animation:macrise .8s cubic-bezier(.2,.9,.1,1) both}
+[data-motion="on"] section:nth-of-type(2),[data-motion="on"] article:nth-of-type(2),[data-motion="on"] aside{animation-delay:.12s}
+[data-motion="on"] article:nth-of-type(3){animation-delay:.24s}
+[data-motion="on"] button,[data-motion="on"] a,[data-motion="on"] label{transition:transform .3s cubic-bezier(.2,.9,.1,1),filter .25s,background .25s,border-color .25s,box-shadow .3s}
+[data-motion="on"] button:hover,[data-motion="on"] a:hover{transform:translateY(-2px);filter:brightness(1.08)}
+[data-motion="off"] *,[data-motion="off"] *::before,[data-motion="off"] *::after{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+@keyframes macpop{from{opacity:0;transform:scale(.9) translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes macink{from{transform:scaleX(.15)}to{transform:none}}
+@keyframes macgrow{from{transform:scaleX(0)}to{transform:none}}
+@keyframes macburst{from{opacity:1;transform:rotate(var(--a)) translateY(0)}to{opacity:0;transform:rotate(var(--a)) translateY(-260px) rotate(220deg)}}
+@keyframes maclevel{0%{opacity:0;transform:scale(.4) rotate(-6deg)}20%{opacity:1;transform:scale(1.08) rotate(2deg)}32%{transform:none}100%{opacity:1}}
+@keyframes macring{0%,100%{box-shadow:0 0 0 4px var(--acc),0 0 0 9999px rgba(5,6,9,.5)}50%{box-shadow:0 0 0 8px var(--acc),0 0 0 9999px rgba(5,6,9,.5)}}
+@keyframes macdash{to{stroke-dashoffset:-24}}
+[data-motion="on"] .mac-pop{animation:macpop .45s cubic-bezier(.34,1.56,.64,1) both}
+[data-motion="on"] .mac-ink{animation:macink .5s cubic-bezier(.34,1.56,.64,1) both;transform-origin:center}
+[data-motion="on"] .mac-grow{animation:macgrow 1.1s cubic-bezier(.2,.9,.1,1) both;transform-origin:left}
+[data-motion="on"] .mac-burst i{animation:macburst 1.6s cubic-bezier(.2,.9,.1,1) infinite}
+[data-motion="on"] .mac-level{animation:maclevel 1.2s cubic-bezier(.34,1.56,.64,1) both}
+[data-motion="on"] .mac-ring{animation:macring 1.6s ease-in-out infinite}
+[data-motion="on"] .mac-dash{animation:macdash 1s linear infinite}
+[data-motion="on"] li{animation:macrise .6s cubic-bezier(.2,.9,.1,1) both}
+</style>
+</helmet>
+<div data-motion="{{motionFlag}}" style="--acc: {{accent}}; isolation: isolate; width: 1440px; height: 860px; box-sizing: border-box; background: #0b0c10; color: #eef0f6; font-family: 'Bricolage Grotesque', system-ui, sans-serif; position: relative; overflow: hidden">
+<div class="mac-orb" aria-hidden="true" style="width: 560px; height: 560px; left: -180px; top: -220px; background: {{accent}}; opacity: .14"></div><div class="mac-orb" aria-hidden="true" style="width: 480px; height: 480px; right: -160px; top: 120px; background: #b69cff; opacity: .16"></div>
+
+<div style="padding: 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; height: 100%; box-sizing: border-box">
+  <section style="background: #12141b; border: 1px solid #2c3140; border-radius: 22px; padding: 28px; display: grid; gap: 16px; align-content: start">
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #8d93a8; margin: 0 0 10px">Settings · Personal wording</p>
+    <h2 style="font-size: 40px; letter-spacing: -.03em; line-height: 1; margin: 0">Your words,<br><span style="color: {{accent}}">everywhere.</span></h2>
+    <p style="color: #a7adc0; line-height: 1.5; margin: 0">Phrases are replaced in every label, notification and server message — including failure text. Longest phrase wins; capitals are kept. Stays in this browser: never uploaded, logged, exported or put in history.</p>
+    <pre style="margin: 0; padding: 16px; border-radius: 16px; background: #0b0c10; border: 1px solid #2c3140; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.6; color: #c9cede">{{json}}</pre>
+    <div style="display: flex; gap: 10px"><span style="padding: 12px 18px; border-radius: 14px; border: 1px solid #2c3140; background: #191c25; font-weight: 600">Upload vocabulary JSON</span><span style="padding: 12px 18px; border-radius: 14px; color: #ff7a6b; font-weight: 600">Remove</span></div>
+  </section>
+  <section style="display: grid; gap: 16px; align-content: start">
+    <p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #8d93a8; margin: 0 0 10px">Runs · the same failed build</p>
+    <article style="background: #12141b; border: 1px solid #2c3140; border-radius: 22px; padding: 20px 22px; opacity: .6"><div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8d93a8; margin-bottom: 6px">WITHOUT PERSONAL WORDING</div><div style="font-size: 20px; font-weight: 700; color: #ff7a6b">The workflow run failed. Ouch — let's see why.</div></article>
+    <article class="mac-pop" style="background: #12141b; border: 1px solid #2c3140; border-radius: 22px; padding: 20px 22px; border-color: {{accent}}"><div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{accent}}; margin-bottom: 6px">{{afterLabel}}</div><div style="font-size: 20px; font-weight: 700; color: #ff7a6b">{{after}}</div><div style="font-size: 14px; color: #a7adc0; margin-top: 6px">{{afterDetail}}</div></article>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap"><sc-for list="{{stages}}" as="s" hint-placeholder-count="3"><button type="button" onClick="{{s.pick}}" aria-pressed="{{s.on}}" style="min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid {{s.border}}; background: {{s.bg}}; color: {{s.color}}; font: 600 13px 'JetBrains Mono', monospace">{{s.label}}</button></sc-for></div>
+  </section>
+</div>
+<div style="display: {{dropDisplay}}; position: absolute; inset: 14px; border: 3px dashed {{accent}}; border-radius: 32px; background: rgba(11,12,16,.82); place-items: center; text-align: center" class="mac-pop"><div><div style="font-size: 30px; font-weight: 800">Drop to apply your personal wording</div><div style="color: #8d93a8; margin-top: 6px">my-words.json · the file stays in this browser</div></div></div>
+<div style="display: {{levelDisplay}}; position: absolute; inset: 0; place-items: center; pointer-events: none">
+  <div class="mac-burst" aria-hidden="true" style="position: absolute; inset: 0; display: grid; place-items: center"><sc-for list="{{sparks}}" as="k" hint-placeholder-count="24"><i style="{{k.style}}"></i></sc-for></div>
+  <strong class="mac-level" style="font-size: 64px; letter-spacing: -.03em; padding: 18px 34px; border-radius: 32px; background: {{accent}}; color: #141a00">My words applied</strong>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent": {"editor": "color", "default": "#d4ff3a", "options": ["#d4ff3a", "#7cf5c8", "#b69cff", "#ff9e7a"], "section": "Look"}, "motion": {"editor": "boolean", "default": true, "section": "Look"}, "stage": {"editor": "select", "default": "applied", "options": ["idle", "dragging", "applied"], "section": "Stage"}, "$preview": {"width": 1440, "height": 860}}'>
+class Component extends DCLogic {
+
+  constructor(p) { super(p); this.state = { stage: null }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#d4ff3a';
+    const motion = this.props.motion ?? true;
+    const stage = this.state.stage ?? (this.props.stage ?? 'applied');
+    const json = '{\n  "schemaVersion": 1,\n  "name": "My words",\n  "entries": {\n    "the workflow run failed": "my build broke",\n    "repository": "project"\n  }\n}';
+    const stages = ['idle', 'dragging', 'applied'].map((id) => ({ label: id, on: id === stage ? 'true' : 'false', border: id === stage ? accent : '#2c3140', bg: id === stage ? accent : '#191c25', color: id === stage ? '#141a00' : '#a7adc0', pick: () => this.setState({ stage: id }) }));
+    const sparks = Array.from({ length: 24 }, (_, i) => ({ style: 'position:absolute;width:12px;height:12px;border-radius:3px;background:hsl(' + i * 15 + ' 90% 65%);--a:' + i * 15 + 'deg;animation-delay:' + (i % 6) * .08 + 's' }));
+    const applied = stage === 'applied';
+    return { accent, motionFlag: motion ? 'on' : 'off', json, stages, sparks,
+      afterLabel: applied ? 'WITH “MY WORDS”' : 'NO WORDING LOADED',
+      after: applied ? 'My build broke. Ouch — let\'s see why.' : 'The workflow run failed. Ouch — let\'s see why.',
+      afterDetail: applied ? 'Server error text is rewritten too: “Error: my build broke on step 3”.' : 'Upload or drop a vocabulary file to change this wording.',
+      dropDisplay: stage === 'dragging' ? 'grid' : 'none', levelDisplay: applied && motion ? 'grid' : 'none' };
+  }
+}
+</script>
+</body>
+</html>

@@ -145,23 +145,25 @@
    "area": "Appearance and layout",
    "id": "appearance-editor",
    "title": "Per-element appearance editor",
-   "status": "partial",
-   "note": "In progress.",
-   "proof": "public/js/ui/menu.js"
+   "status": "done",
+   "note": "Context menu → Customize appearance; per-element colour, type, spacing; export/import.",
+   "proof": "public/js/ui/appearance-editor.js"
   },
   {
    "area": "Appearance and layout",
    "id": "color-picker",
    "title": "Colour picker and translator",
-   "status": "partial",
-   "note": "In progress."
+   "status": "done",
+   "note": "Picker with 12 colour formats, gamut mapping and contrast checks.",
+   "proof": "public/js/ui/color-picker.js"
   },
   {
    "area": "Appearance and layout",
    "id": "logo-customization",
    "title": "Logo customization",
-   "status": "partial",
-   "note": "In progress."
+   "status": "done",
+   "note": "Built-in marks or an uploaded image, kept in this browser.",
+   "proof": "public/js/ui/logo.js"
   },
   {
    "area": "Appearance and layout",
