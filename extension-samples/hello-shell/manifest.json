@@ -1,0 +1,12 @@
+{
+  "manifestVersion": 1,
+  "id": "hello-shell",
+  "name": "Hello from sh",
+  "version": "0.1.0",
+  "description": "Sample: the smallest possible extension, written in POSIX sh. Replies with a greeting and the size of the request.",
+  "run": { "command": "sh", "args": ["main.sh"] },
+  "hooks": ["command"],
+  "permissions": [],
+  "command": { "title": "Say hello from sh" },
+  "limits": { "timeoutMs": 5000, "maxOutputBytes": 4096 }
+}

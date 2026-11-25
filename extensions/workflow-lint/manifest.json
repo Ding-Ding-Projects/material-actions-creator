@@ -1,0 +1,11 @@
+{
+  "manifestVersion": 1,
+  "id": "workflow-lint",
+  "name": "Workflow lint",
+  "version": "1.0.0",
+  "description": "Checks a generated workflow for actions that are not pinned to a commit, jobs with no time limit, and broad token permissions.",
+  "author": "Material Actions Creator",
+  "run": { "command": "node", "args": ["main.mjs"] },
+  "hooks": ["workflow.lint"],
+  "permissions": ["workflow:read"]
+}

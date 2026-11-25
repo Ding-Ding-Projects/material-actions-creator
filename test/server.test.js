@@ -141,3 +141,34 @@ test('streams build updates over server-sent events', async () => {
   assert.match(first, /event: hello/);
   ctrl.abort();
 });
+
+test('extensions API: list, lint a workflow, consent gate, and the finished-build hook', async () => {
+  assert.equal((await fetch(base + '/api/extensions')).status, 401);
+  const list = await (await call('/api/extensions')).json();
+  assert.deepEqual(list.extensions.map((e) => e.id).sort(), ['build-summary', 'checksums', 'workflow-lint']);
+  assert.ok(list.extensions.every((e) => e.enabled && e.source === 'builtin'));
+  assert.equal(list.protocol, 1);
+
+  const lint = await (await call('/api/extensions/workflow-lint/run', { method: 'POST', body: { hook: 'workflow.lint', yaml: 'jobs:\n  a:\n    steps:\n      - uses: actions/checkout@v4\n' } })).json();
+  assert.equal(lint.ok, true);
+  assert.equal(lint.result.findings.length, 2);
+
+  // The build that finished earlier in this file was handed to the built-in extensions.
+  const deadline = Date.now() + 5000;
+  let sums;
+  while (Date.now() < deadline) {
+    sums = (await (await call('/api/extensions')).json()).extensions.find((e) => e.id === 'checksums').lastRun;
+    if (sums) break;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  assert.equal(sums.ok, true);
+  assert.equal(sums.hook, 'build.finished');
+  assert.equal(sums.result.items.length, 1); // hashing itself is covered in extensions.test.js
+
+  const off = await (await call('/api/extensions/checksums', { method: 'POST', body: { enabled: false } })).json();
+  assert.equal(off.enabled, false);
+  assert.equal((await call('/api/extensions/checksums/run', { method: 'POST', body: { hook: 'build.finished' } })).status, 409);
+  assert.equal((await call('/api/extensions/checksums', { method: 'POST', body: { grant: ['build:read'] } })).status, 409);
+  assert.equal((await call('/api/extensions/nope', { method: 'POST', body: { enabled: true } })).status, 404);
+  assert.equal((await (await call('/api/extensions/checksums', { method: 'POST', body: { enabled: true } })).json()).enabled, true);
+});

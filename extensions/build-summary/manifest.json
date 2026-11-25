@@ -1,0 +1,11 @@
+{
+  "manifestVersion": 1,
+  "id": "build-summary",
+  "name": "Build summary",
+  "version": "1.0.0",
+  "description": "A short Markdown summary of a finished build: what ran, how long each part took to finish, and how it ended.",
+  "author": "Material Actions Creator",
+  "run": { "command": "node", "args": ["main.mjs"] },
+  "hooks": ["build.finished"],
+  "permissions": ["build:read"]
+}

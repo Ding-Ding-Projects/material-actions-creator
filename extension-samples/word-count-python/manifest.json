@@ -1,0 +1,11 @@
+{
+  "manifestVersion": 1,
+  "id": "word-count-python",
+  "name": "Word count (Python)",
+  "version": "0.1.0",
+  "description": "Sample in Python: counts lines, words and characters in the text you give it.",
+  "run": { "command": "python3", "args": ["main.py"] },
+  "hooks": ["command"],
+  "permissions": [],
+  "command": { "title": "Count words", "inputLabel": "Text to count" }
+}

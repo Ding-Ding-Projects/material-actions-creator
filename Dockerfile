@@ -14,6 +14,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY src ./src
 COPY public ./public
+COPY extensions ./extensions
 ARG MAC_COMMIT=""
 ARG MAC_BUILT_AT=""
 ENV MAC_COMMIT=$MAC_COMMIT MAC_BUILT_AT=$MAC_BUILT_AT

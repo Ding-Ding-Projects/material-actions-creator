@@ -11,6 +11,7 @@ import { JobManager } from './jobs.js';
 import { validateRequest, renderWorkflow, PLATFORMS, RUNNERS, MODES, ValidationError } from './workflow.js';
 import { GitHubApp } from './githubapp.js';
 import { transformWorkflow, workflowName } from './transform.js';
+import { ExtensionHost } from './extensions.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const PUBLIC_DIR = join(ROOT, 'public');
@@ -79,12 +80,29 @@ export function createApp(opts = {}) {
     keepRepoOnFailure: env.KEEP_REPO_ON_FAILURE === 'true',
   });
 
+  const dataDir = env.DATA_DIR || join(ROOT, 'data');
+  const extensions = opts.extensions || new ExtensionHost({
+    dirs: [{ path: join(ROOT, 'extensions'), source: 'builtin' }, { path: join(dataDir, 'extensions'), source: 'user' }],
+    dataDir, env,
+  });
+  const extensionsReady = extensions.load().catch(() => {});
+
   const clients = new Set();
   const broadcast = (event, data) => {
     const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
     for (const res of clients) res.write(msg);
   };
-  jobs.on('update', (job) => broadcast('build', job));
+  // Extensions hear about a build once, when it first reaches an end state.
+  const finished = new Set();
+  jobs.on('update', (job) => {
+    broadcast('build', job);
+    if (!['ready', 'failed'].includes(job.status) || finished.has(job.id)) return;
+    finished.add(job.id);
+    const outputs = (job.outputs || []).map((o, i) => ({ name: o.name, size: o.size, path: jobs.filePath(job.id, i) })).filter((o) => o.path);
+    extensionsReady.then(() => extensions.dispatch('build.finished', { build: job, outputs })).catch(() => {});
+  });
+  extensions.on('run', (r) => broadcast('extension', r));
+  extensions.on('change', () => broadcast('extensions', {}));
   jobs.on('remove', (id) => broadcast('remove', { id }));
   jobs.on('recovery', (r) => broadcast('recovery', r));
   ghAuth.on('update', (flow) => broadcast('auth', flow));
@@ -196,6 +214,29 @@ export function createApp(opts = {}) {
       await getClient(); // fail fast when signed out
       return json(res, 202, jobs.create(request));
     }
+    if (pathname === '/api/extensions' && req.method === 'GET') {
+      await extensionsReady;
+      return json(res, 200, { ...extensions.list(), userDir: join(dataDir, 'extensions') });
+    }
+    if (pathname === '/api/extensions/rescan' && req.method === 'POST') {
+      await extensions.scan();
+      return json(res, 200, { ...extensions.list(), userDir: join(dataDir, 'extensions') });
+    }
+    const x = pathname.match(/^\/api\/extensions\/([a-z0-9-]{2,40})(\/run)?$/);
+    if (x && req.method === 'POST') {
+      await extensionsReady;
+      const b = await body(req);
+      if (!x[2]) return json(res, 200, await extensions.configure(x[1], { enabled: b.enabled, grant: b.grant }));
+      const hook = b.hook === 'workflow.lint' ? 'workflow.lint' : b.hook === 'build.finished' ? 'build.finished' : 'command';
+      const ctx = { input: typeof b.input === 'string' ? b.input : '', yaml: typeof b.yaml === 'string' ? b.yaml.slice(0, 500_000) : undefined };
+      if (b.buildId) {
+        const job = jobs.get(String(b.buildId));
+        if (!job) return json(res, 404, { error: 'Build not found.' });
+        ctx.build = job;
+        ctx.outputs = (job.outputs || []).map((o, i) => ({ name: o.name, size: o.size, path: jobs.filePath(job.id, i) })).filter((o) => o.path);
+      }
+      return json(res, 200, await extensions.run(x[1], hook, ctx));
+    }
     if (pathname === '/api/sweep' && req.method === 'POST') return json(res, 200, { deleted: await jobs.sweep() });
     if (m && !m[2] && req.method === 'GET') {
       const job = jobs.get(m[1]);
@@ -248,7 +289,7 @@ export function createApp(opts = {}) {
       else res.end();
     }
   });
-  return { server, jobs, ghAuth };
+  return { server, jobs, ghAuth, extensions };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

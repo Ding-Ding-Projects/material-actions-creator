@@ -1,0 +1,12 @@
+{
+  "manifestVersion": 1,
+  "id": "checksums",
+  "name": "Output checksums",
+  "version": "1.0.0",
+  "description": "SHA-256 for every output file when a build finishes, ready to paste beside a download.",
+  "author": "Material Actions Creator",
+  "run": { "command": "node", "args": ["main.mjs"] },
+  "hooks": ["build.finished"],
+  "permissions": ["build:read", "outputs:read"],
+  "limits": { "timeoutMs": 30000, "maxOutputBytes": 131072 }
+}
