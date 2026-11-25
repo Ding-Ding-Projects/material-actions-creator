@@ -13,6 +13,7 @@ import { validateRequest, renderWorkflow, PLATFORMS, RUNNERS, MODES, ValidationE
 import { GitHubApp } from './githubapp.js';
 import { transformWorkflow, workflowName } from './transform.js';
 import { ExtensionHost } from './extensions.js';
+import { RecipeBook } from './recipes.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const PUBLIC_DIR = join(ROOT, 'public');
@@ -86,6 +87,11 @@ export function createApp(opts = {}) {
     dirs: [{ path: join(ROOT, 'extensions'), source: 'builtin' }, { path: join(dataDir, 'extensions'), source: 'user' }],
     dataDir, env, samplesDir: join(ROOT, 'extension-samples'), hide: [env.GH_CONFIG_DIR].filter(Boolean),
   });
+  const recipes = opts.recipes || new RecipeBook({
+    file: join(dataDir, 'recipes.json'), validate: validateRequest,
+    start: async (request) => { await getClient(); return jobs.create(request); },
+  });
+  const recipesReady = recipes.load().then(() => { if (opts.recipeClock !== false) recipes.startClock(); }).catch(() => {});
   const extensionList = async () => ({ ...extensions.list(), userDir: join(dataDir, 'extensions'), gallery: await extensions.gallery() });
   const extensionsReady = extensions.load().catch(() => {});
 
@@ -104,6 +110,8 @@ export function createApp(opts = {}) {
     extensionsReady.then(() => extensions.dispatch('build.finished', { build: job, outputs })).catch(() => {});
   });
   extensions.on('run', (r) => broadcast('extension', r));
+  jobs.on('update', (job) => { recipes.noteBuild(job).catch(() => {}); });
+  recipes.on('change', () => broadcast('recipes', {}));
   extensions.on('change', () => broadcast('extensions', {}));
   jobs.on('remove', (id) => broadcast('remove', { id }));
   jobs.on('recovery', (r) => broadcast('recovery', r));
@@ -216,6 +224,15 @@ export function createApp(opts = {}) {
       await getClient(); // fail fast when signed out
       return json(res, 202, jobs.create(request));
     }
+    if (pathname === '/api/recipes' && req.method === 'GET') { await recipesReady; return json(res, 200, { recipes: recipes.list() }); }
+    if (pathname === '/api/recipes' && req.method === 'POST') { await recipesReady; return json(res, 201, await recipes.save(await body(req))); }
+    const rc = pathname.match(/^\/api\/recipes\/([\w-]{1,80})(\/run)?$/);
+    if (rc) {
+      await recipesReady;
+      if (rc[2] && req.method === 'POST') return json(res, 202, await recipes.run(decodeURIComponent(rc[1])));
+      if (!rc[2] && req.method === 'PUT') return json(res, 200, await recipes.save({ ...(await body(req)), id: rc[1] }));
+      if (!rc[2] && req.method === 'DELETE') { await recipes.remove(rc[1]); return json(res, 200, { recipes: recipes.list() }); }
+    }
     if (pathname === '/api/extensions' && req.method === 'GET') {
       await extensionsReady;
       return json(res, 200, await extensionList());
@@ -318,7 +335,7 @@ export function createApp(opts = {}) {
       else res.end();
     }
   });
-  return { server, jobs, ghAuth, extensions };
+  return { server, jobs, ghAuth, extensions, recipes };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

@@ -141,6 +141,16 @@ try {
       $('[data-ext="hello-shell"] [data-ext-run]').requestSubmit(); await wait(1500);
       return $('[data-ext="hello-shell"] .ext-summary')?.textContent || ''`, (v) => /Extension id: hello-shell/.test(v));
   }
+  await check('Recipes: save the Workflows form, set a schedule, delete', `
+    localStorage.setItem('mac-wf', JSON.stringify({ repo: 'owner/repo', ref: 'main', runner: 'ubuntu-latest', mode: 'private', outputs: 'dist/**', scripts: [{ path: 'build.sh', on: true }], workflows: [] }));
+    const r = await fetch('/api/recipes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Check recipe', request: { kind: 'scripts', repo: 'owner/repo', scripts: ['build.sh'], outputs: 'dist/**', runner: 'ubuntu-latest' } }) });
+    if (r.status !== 201) return 'save ' + r.status;
+    $('#tab-recipes').click(); await wait(900);
+    const card = $('.rec-card'); if (!card) return 'no card';
+    const sel = card.querySelector('[data-rec-type]'); sel.value = 'interval'; sel.dispatchEvent(new Event('change', { bubbles: true })); await wait(900);
+    const next = /next:/.test($('.rec-card .rec-status').textContent);
+    const id = $('.rec-card').dataset.rec; await fetch('/api/recipes/' + id, { method: 'DELETE' }); await wait(700);
+    return [next, !$('.rec-card')].join()`, (v) => v === 'true,true');
   await check('Workspace: dock panels, timing chart and saved layout', `
     const runs = await import('/js/views/runs.js'); const now = Date.now();
     runs.upsert({ id: 'check1', title: 'owner/repo', platform: 'ubuntu-latest', mode: 'private', status: 'running', createdAt: now - 60000, updatedAt: now, stages: [], outputs: [], steps: [

@@ -174,3 +174,21 @@ test('extensions API: list, lint a workflow, consent gate, and the finished-buil
   assert.equal((await call('/api/extensions/nope', { method: 'POST', body: { enabled: true } })).status, 404);
   assert.equal((await (await call('/api/extensions/checksums', { method: 'POST', body: { enabled: true } })).json()).enabled, true);
 });
+
+test('recipes API: save, list, run starts a build, delete', async () => {
+  assert.equal((await fetch(base + '/api/recipes')).status, 401);
+  const saved = await (await call('/api/recipes', { method: 'POST', body: { name: 'Installer', request: { kind: 'scripts', repo: 'Ding-Ding-Projects/map-editor', scripts: ['build\\installer.bat'], outputs: 'dist/**/*.msi' }, schedule: { type: 'interval', hours: 12 } } })).json();
+  assert.ok(saved.id && saved.nextAt > Date.now());
+  assert.equal((await call('/api/recipes', { method: 'POST', body: { name: 'Installer', request: { kind: 'scripts', repo: 'a/b', scripts: ['x.sh'], outputs: 'x' } } })).status, 409);
+  assert.equal((await call('/api/recipes', { method: 'POST', body: { name: 'Bad', request: { kind: 'scripts', repo: 'nope' } } })).status, 400);
+  const ran = await call(`/api/recipes/${saved.id}/run`, { method: 'POST' });
+  assert.equal(ran.status, 202);
+  const { build, recipe } = await ran.json();
+  assert.equal(build.status, 'running');
+  assert.equal(recipe.lastRun.buildId, build.id);
+  const put = await (await call(`/api/recipes/${saved.id}`, { method: 'PUT', body: { name: 'Installer nightly', schedule: { type: 'daily', time: '02:00' } } })).json();
+  assert.deepEqual(put.schedule, { type: 'daily', time: '02:00' });
+  const list = await (await call('/api/recipes')).json();
+  assert.deepEqual(list.recipes.map((r) => r.name), ['Installer nightly']);
+  assert.deepEqual((await (await call(`/api/recipes/${saved.id}`, { method: 'DELETE' })).json()).recipes, []);
+});

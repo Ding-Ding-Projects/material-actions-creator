@@ -22,6 +22,7 @@ import * as settings from './js/views/settings.js';
 import * as info from './js/views/info.js';
 import * as extensionsView from './js/views/extensions.js';
 import * as workspace from './js/views/workspace.js';
+import * as recipesView from './js/views/recipes.js';
 
 Object.assign(STRINGS, {
   'key.eyebrow': { en: 'Locked', yue: '鎖咗' },
@@ -154,6 +155,7 @@ function start() {
   info.register();
   extensionsView.register();
   workspace.register();
+  recipesView.register();
   settings.register();
   import('./js/views/tools.js').then((m) => { m.registerTools(); tabs.render(); }).catch(() => { /* tools not bundled */ });
 

@@ -50,6 +50,10 @@ Runs
   mac watch <id>                   Follow a build (resumes it if the engine had stopped)
   mac download <id> [--out dir]    Save every output (decrypted)
   mac rm <id>                      Dismiss a finished build and delete its files
+  mac recipes                      List saved recipes
+  mac recipe save <name> owner/repo [build options] [--every <hours> | --daily HH:MM]
+  mac recipe run <name>            Start a recipe and follow it
+  mac recipe rm <name>             Delete a recipe
   mac sweep                        Delete leftover temporary repositories
 
 Other
@@ -66,7 +70,7 @@ Common options
 `;
 
 const OPTIONS = {
-  server: { type: 'string' }, key: { type: 'string' }, owner: { type: 'string' },
+  server: { type: 'string' }, key: { type: 'string' }, owner: { type: 'string' }, every: { type: 'string' }, daily: { type: 'string' },
   ref: { type: 'string' }, script: { type: 'string', multiple: true }, 'all-scripts': { type: 'boolean' },
   workflow: { type: 'string', multiple: true }, 'all-workflows': { type: 'boolean' },
   runner: { type: 'string' }, outputs: { type: 'string' }, encrypted: { type: 'boolean' }, name: { type: 'string' },
@@ -359,6 +363,46 @@ const COMMANDS = {
     await be.call(`/api/builds/${id}`, { method: 'DELETE' });
     console.log(`Removed ${id}.`);
     return 0;
+  },
+
+  async recipes(be, args, opts) {
+    const { recipes } = await be.call('/api/recipes');
+    if (opts.json) { console.log(JSON.stringify(recipes, null, 2)); return 0; }
+    if (!recipes.length) { console.log('No recipes. Save one with: mac recipe save <name> owner/repo --all-scripts'); return 0; }
+    for (const r of recipes) {
+      const when = r.schedule.type === 'daily' ? `daily at ${r.schedule.time}` : r.schedule.type === 'interval' ? `every ${r.schedule.hours} h` : 'manual';
+      const last = r.lastRun ? `${r.lastRun.error ? 'not started' : r.lastRun.status || 'started'} ${new Date(r.lastRun.at).toLocaleString()}` : 'never run';
+      console.log(`${bold(r.name)}  ${dim(r.request.repo || r.request.imageName || '')}  ${violet(when)}  ${dim(last)}`);
+    }
+    return 0;
+  },
+
+  async recipe(be, [action, name, repo], opts) {
+    if (action === 'run') {
+      if (!name) throw new CliError('mac recipe run <name>');
+      const { build } = await be.call(`/api/recipes/${encodeURIComponent(name)}/run`, { method: 'POST' });
+      return finishBuild(be, build, opts);
+    }
+    if (action === 'save') {
+      if (!name || !repo) throw new CliError('mac recipe save <name> owner/repo [build options] [--every <hours> | --daily HH:MM]');
+      const request = await repoRequest(be, repo, opts);
+      const schedule = opts.daily ? { type: 'daily', time: opts.daily } : opts.every ? { type: 'interval', hours: Number(opts.every) } : { type: 'manual' };
+      const { recipes } = await be.call('/api/recipes');
+      const existing = recipes.find((r) => r.name.toLowerCase() === name.toLowerCase());
+      const saved = await be.call(existing ? `/api/recipes/${existing.id}` : '/api/recipes', { method: existing ? 'PUT' : 'POST', body: { name, request, schedule } });
+      if (opts.json) console.log(JSON.stringify(saved, null, 2));
+      else console.log(`${existing ? 'Updated' : 'Saved'} recipe ${bold(saved.name)}.${schedule.type === 'manual' ? '' : ' Schedules run while the app server is running.'}`);
+      return 0;
+    }
+    if (action === 'rm') {
+      const { recipes } = await be.call('/api/recipes');
+      const r = recipes.find((x) => x.id === name || x.name.toLowerCase() === String(name).toLowerCase());
+      if (!r) throw new CliError(`No recipe called "${name}".`);
+      await be.call(`/api/recipes/${r.id}`, { method: 'DELETE' });
+      console.log(`Removed recipe ${r.name}.`);
+      return 0;
+    }
+    throw new CliError('mac recipe <run|save|rm> <name>');
   },
 
   async sweep(be, args, opts) {

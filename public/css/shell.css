@@ -408,3 +408,25 @@ pre.ext-summary { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; fon
 .ext-drop:hover, .ext-drop.over, .ext-drop:focus-within { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
 .ext-drop.over { transform: scale(1.01); }
 .text-btn.danger { color: var(--coral); }
+
+/* Recipes */
+.view[data-view="recipes"] { padding: clamp(16px, 3vw, 40px) clamp(16px, 4vw, 48px) 96px; max-width: 1320px; margin: 0 auto; }
+.rec-new { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 20px; }
+.rec-new .grow { flex: 1 1 260px; }
+.rec-new input { width: 100%; font: 500 15px var(--system); color: var(--text); background: var(--ink-0); border: 1px solid var(--line); border-radius: var(--r-md); padding: 0 14px; }
+.rec-what { flex-basis: 100%; margin: 0; overflow-wrap: anywhere; }
+.rec-list { list-style: none; padding: 0; margin: 20px 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+.rec-list .empty { grid-column: 1 / -1; }
+.rec-card { display: grid; gap: 10px; align-content: start; padding: 20px; border-radius: var(--r-lg); background: var(--ink-1); border: 1px solid var(--line); animation: rise .45s var(--ease) both; animation-delay: calc(min(var(--i), 10) * 70ms); transition: transform .35s var(--spring), border-color .2s; }
+.rec-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.rec-card p { margin: 0; }
+.rec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rec-name { font: 800 20px var(--display); overflow-wrap: anywhere; }
+.rec-repo { font-family: var(--mono); overflow-wrap: anywhere; }
+.rec-sched { display: flex; flex-wrap: wrap; gap: 10px; }
+.rec-sched .field { flex: 1 1 140px; }
+.rec-sched input, .rec-sched select { width: 100%; font: 500 14px var(--mono); color: var(--text); background: var(--ink-0); border: 1px solid var(--line); border-radius: var(--r-md); padding: 0 12px; }
+.rec-status { display: flex; gap: 8px; align-items: baseline; padding: 10px 12px; border-radius: 12px; background: var(--ink-0); font-size: 13px; color: var(--muted); }
+.rec-status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex: none; }
+.rec-status.good .dot { background: var(--mint); } .rec-status.bad .dot { background: var(--coral); }
+.rec-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }

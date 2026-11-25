@@ -19,6 +19,7 @@ const $ = (s) => root.querySelector(s);
 
 export function setRunners(list) { runners = list; if (root) renderRunners(); }
 
+export const currentRequest = () => request();
 function request() {
   return { kind: 'scripts', repo: wf.repo, ref: wf.ref, runner: wf.runner, scripts: wf.scripts.filter((s) => s.on).map((s) => s.path), workflows: wf.workflows.filter((w) => w.on).map((w) => w.path), outputs: wf.outputs, mode: wf.mode };
 }
