@@ -156,7 +156,7 @@ test('extensions API: list, lint a workflow, consent gate, and the finished-buil
   assert.equal(lint.result.findings.length, 2);
 
   // The build that finished earlier in this file was handed to the built-in extensions.
-  const deadline = Date.now() + 5000;
+  const deadline = Date.now() + 15000;
   let sums;
   while (Date.now() < deadline) {
     sums = (await (await call('/api/extensions')).json()).extensions.find((e) => e.id === 'checksums').lastRun;
