@@ -1,0 +1,939 @@
+{
+ "updated": "2026-11-24",
+ "features": [
+  {
+   "area": "Language and personalization",
+   "id": "job-experience-document-label",
+   "title": "Job experience document wording",
+   "status": "na",
+   "note": "The app has no job-related workflows."
+  },
+  {
+   "area": "Language and personalization",
+   "id": "language",
+   "title": "English, Cantonese and bilingual modes",
+   "status": "done",
+   "note": "Every string has English and Cantonese copy; bilingual shows both.",
+   "proof": "public/js/core/i18n.js"
+  },
+  {
+   "area": "Language and personalization",
+   "id": "funny-emoji",
+   "title": "Funny-level sliders and dialog emoji switch",
+   "status": "done",
+   "note": "Five variants per message for both languages; emoji switch in Settings.",
+   "proof": "public/js/core/strings.js"
+  },
+  {
+   "area": "Language and personalization",
+   "id": "personal-vocabulary",
+   "title": "Local personal vocabulary upload",
+   "status": "done",
+   "note": "Validated, local-only, applied to every string and server message.",
+   "proof": "public/js/core/vocab.js"
+  },
+  {
+   "area": "Language and personalization",
+   "id": "vocabulary-drop-apply",
+   "title": "Drop a vocabulary file onto the window",
+   "status": "done",
+   "note": "Window-wide drop zone with a celebration on success.",
+   "proof": "public/app.js"
+  },
+  {
+   "area": "Language and personalization",
+   "id": "school-mode",
+   "title": "School mode",
+   "status": "partial",
+   "note": "Forces the most serious tone; no content filter beyond that yet.",
+   "proof": "public/js/core/i18n.js"
+  },
+  {
+   "area": "Language and personalization",
+   "id": "narration",
+   "title": "Spoken narrator and voice pickers",
+   "status": "done",
+   "note": "Uses the browser's speech voices; voice and speed in Settings.",
+   "proof": "public/js/core/feedback.js"
+  },
+  {
+   "area": "Language and personalization",
+   "id": "action-sound-effects",
+   "title": "Action sounds with a Settings switch",
+   "status": "done",
+   "note": "Synthesised locally, with volume.",
+   "proof": "public/js/core/feedback.js"
+  },
+  {
+   "area": "Language and personalization",
+   "id": "scheduled-settings",
+   "title": "Scheduled and external settings sources",
+   "status": "partial",
+   "note": "Time-of-day schedule and a settings URL; no calendar sources.",
+   "proof": "public/js/views/settings.js"
+  },
+  {
+   "area": "Language and personalization",
+   "id": "display-name",
+   "title": "Renaming the app",
+   "status": "done",
+   "note": "Name shown in the header and window title.",
+   "proof": "public/js/views/settings.js"
+  },
+  {
+   "area": "Language and personalization",
+   "id": "adhd-modes",
+   "title": "Focus modes",
+   "status": "partial",
+   "note": "One focus mode that hides secondary detail; no timers yet.",
+   "proof": "public/app.css"
+  },
+  {
+   "area": "Language and personalization",
+   "id": "dim-sum",
+   "title": "Dim sum surprise",
+   "status": "partial",
+   "note": "Toggle and panel exist; the photo source is not reachable yet, so it shows an honest unavailable state.",
+   "proof": "public/app.js"
+  },
+  {
+   "area": "Language and personalization",
+   "id": "dim-sum-photo-source",
+   "title": "Public dim-sum photo source",
+   "status": "missing",
+   "note": "Access to the public photo catalogue has not been granted to this build."
+  },
+  {
+   "area": "Appearance and layout",
+   "id": "material-design",
+   "title": "Material-style design conformance",
+   "status": "partial",
+   "note": "Custom tokens and components; not audited against Material 3 yet.",
+   "proof": "public/app.css"
+  },
+  {
+   "area": "Appearance and layout",
+   "id": "workflow-navigation",
+   "title": "Workflow navigation and window chrome",
+   "status": "partial",
+   "note": "Tabs and header; no frameless desktop window (web app).",
+   "proof": "public/js/ui/tabs.js"
+  },
+  {
+   "area": "Appearance and layout",
+   "id": "motion",
+   "title": "Motion with a complete reduced-motion path",
+   "status": "done",
+   "note": "View transitions and staged animation; system and in-app reduced motion stop them.",
+   "proof": "public/app.css"
+  },
+  {
+   "area": "Appearance and layout",
+   "id": "live-charts",
+   "title": "Live charts",
+   "status": "missing",
+   "note": "Run timing charts are not built."
+  },
+  {
+   "area": "Appearance and layout",
+   "id": "update-coming-soon",
+   "title": "Update notice with progress",
+   "status": "missing",
+   "note": "No update channel for the web app yet."
+  },
+  {
+   "area": "Appearance and layout",
+   "id": "appearance-editor",
+   "title": "Per-element appearance editor",
+   "status": "partial",
+   "note": "In progress.",
+   "proof": "public/js/ui/menu.js"
+  },
+  {
+   "area": "Appearance and layout",
+   "id": "color-picker",
+   "title": "Colour picker and translator",
+   "status": "partial",
+   "note": "In progress."
+  },
+  {
+   "area": "Appearance and layout",
+   "id": "logo-customization",
+   "title": "Logo customization",
+   "status": "partial",
+   "note": "In progress."
+  },
+  {
+   "area": "Appearance and layout",
+   "id": "overlay-panels",
+   "title": "Overlays and panels",
+   "status": "done",
+   "note": "Dialogs, sheets and side panels share one style and focus handling.",
+   "proof": "public/app.css"
+  },
+  {
+   "area": "Appearance and layout",
+   "id": "collapse-filters",
+   "title": "Collapsible filters and statistics",
+   "status": "partial",
+   "note": "Regex builder and settings sections collapse; run statistics are not built.",
+   "proof": "public/js/ui/regex-builder.js"
+  },
+  {
+   "area": "Appearance and layout",
+   "id": "accessibility-sizing",
+   "title": "Accessibility and sizing",
+   "status": "partial",
+   "note": "Labels, focus, text size and density; not checked with a screen reader on every surface.",
+   "proof": "public/app.css"
+  },
+  {
+   "area": "Appearance and layout",
+   "id": "functional-ui",
+   "title": "Functional UI and truthful empty states",
+   "status": "done",
+   "note": "Every control does something; empty and unavailable states say what is true.",
+   "proof": "public/js/views/runs.js"
+  },
+  {
+   "area": "Navigation and search",
+   "id": "onboarding-wizard",
+   "title": "Setup wizard",
+   "status": "done",
+   "note": "Language, GitHub check, default mode and vocabulary, with Back, Next, skip and resume.",
+   "proof": "public/js/ui/onboarding.js"
+  },
+  {
+   "area": "Navigation and search",
+   "id": "extension-support",
+   "title": "Extension support",
+   "status": "missing",
+   "note": "No extension manifest, protocol or manager yet."
+  },
+  {
+   "area": "Navigation and search",
+   "id": "tabs",
+   "title": "Browser-style tabs, every tab open by default",
+   "status": "done",
+   "note": "Fresh installs open every tab; closed tabs stay closed; Open every tab restores.",
+   "proof": "public/js/ui/tabs.js"
+  },
+  {
+   "area": "Navigation and search",
+   "id": "regex-search",
+   "title": "Regex builder on every search",
+   "status": "done",
+   "note": "Workflows, runs, docs, changelog, history, completeness, settings and palette.",
+   "proof": "public/js/ui/regex-builder.js"
+  },
+  {
+   "area": "Navigation and search",
+   "id": "command-palette",
+   "title": "Ctrl+Shift+F command palette",
+   "status": "done",
+   "note": "Pages, commands and live setting controls, with teleport to the element.",
+   "proof": "public/js/ui/palette.js"
+  },
+  {
+   "area": "Navigation and search",
+   "id": "context-menus",
+   "title": "A context menu on every element",
+   "status": "done",
+   "note": "Right-click or Shift+F10 on any element.",
+   "proof": "public/js/ui/menu.js"
+  },
+  {
+   "area": "Navigation and search",
+   "id": "menu-shortcuts",
+   "title": "Context menus show working shortcuts",
+   "status": "done",
+   "note": "Shortcuts listed in the menu run the same action.",
+   "proof": "public/js/ui/menu.js"
+  },
+  {
+   "area": "Navigation and search",
+   "id": "rich-controls",
+   "title": "Rich controls wherever a value is shown",
+   "status": "partial",
+   "note": "Settings and palette use sliders, switches and pickers; some read-only values remain text.",
+   "proof": "public/js/ui/palette.js"
+  },
+  {
+   "area": "Navigation and search",
+   "id": "guided-forms",
+   "title": "Guided forms",
+   "status": "partial",
+   "note": "Workflow form validates and explains; no step-by-step guide.",
+   "proof": "public/js/views/workflows.js"
+  },
+  {
+   "area": "Navigation and search",
+   "id": "info-icon-guidance",
+   "title": "Info buttons on every control",
+   "status": "partial",
+   "note": "Settings have explanations; other controls do not yet.",
+   "proof": "public/js/views/settings.js"
+  },
+  {
+   "area": "Navigation and search",
+   "id": "settings-explanations",
+   "title": "Settings that explain themselves",
+   "status": "done",
+   "note": "Each setting says why it exists.",
+   "proof": "public/js/views/settings.js"
+  },
+  {
+   "area": "Navigation and search",
+   "id": "settings-quick-add",
+   "title": "Quick add beside every settings pointer",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Navigation and search",
+   "id": "blank-editors",
+   "title": "Presets for blank editors",
+   "status": "partial",
+   "note": "Dockerfile has starter presets; others do not.",
+   "proof": "public/js/views/dockerfile.js"
+  },
+  {
+   "area": "Safety and sign-in",
+   "id": "super-confirmation",
+   "title": "Two-key confirmation for destructive actions",
+   "status": "done",
+   "note": "Slider plus Shift+Enter.",
+   "proof": "public/js/ui/confirm.js"
+  },
+  {
+   "area": "Safety and sign-in",
+   "id": "element-locks",
+   "title": "Locks on every element",
+   "status": "done",
+   "note": "Lock from the context menu; Settings → Data unlocks everything.",
+   "proof": "public/js/ui/menu.js"
+  },
+  {
+   "area": "Safety and sign-in",
+   "id": "support-tickets",
+   "title": "Support ticket recovery desk",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Safety and sign-in",
+   "id": "unlock-ladder",
+   "title": "Unlock ladder",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Safety and sign-in",
+   "id": "authenticator",
+   "title": "Built-in authenticator",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Safety and sign-in",
+   "id": "qr-pairing",
+   "title": "QR pairing for one-time codes",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Safety and sign-in",
+   "id": "honest-monetization",
+   "title": "Free, honest and never nagging",
+   "status": "done",
+   "note": "Free and open source; no paid features or prompts.",
+   "proof": "README.md"
+  },
+  {
+   "area": "Safety and sign-in",
+   "id": "first-account-owner",
+   "title": "First account becomes the owner",
+   "status": "partial",
+   "note": "Single-user access key; no account system.",
+   "proof": "src/server.js"
+  },
+  {
+   "area": "Records and messages",
+   "id": "local-history",
+   "title": "Local version history",
+   "status": "done",
+   "note": "Every settings change kept, with restore.",
+   "proof": "public/js/core/store.js"
+  },
+  {
+   "area": "Records and messages",
+   "id": "exports",
+   "title": "Export in every format",
+   "status": "done",
+   "note": "JSON, NDJSON, YAML, XML, CSV, TSV, Markdown, HTML and text.",
+   "proof": "public/js/core/exporter.js"
+  },
+  {
+   "area": "Records and messages",
+   "id": "bulk-actions",
+   "title": "Bulk actions everywhere",
+   "status": "partial",
+   "note": "Runs, history and notifications; not every list.",
+   "proof": "public/js/views/runs.js"
+  },
+  {
+   "area": "Records and messages",
+   "id": "changelog",
+   "title": "Changelog viewer",
+   "status": "done",
+   "note": "Search, regex and date range.",
+   "proof": "public/js/views/info.js"
+  },
+  {
+   "area": "Records and messages",
+   "id": "offline-docs",
+   "title": "Offline documentation",
+   "status": "done",
+   "note": "Bundled with the app; no internet needed.",
+   "proof": "public/docs/index.json"
+  },
+  {
+   "area": "Records and messages",
+   "id": "rendered-provider-text",
+   "title": "Provider text is rendered",
+   "status": "done",
+   "note": "Markdown from docs and changelog goes through one safe renderer.",
+   "proof": "public/js/ui/markdown.js"
+  },
+  {
+   "area": "Records and messages",
+   "id": "notifications",
+   "title": "Non-blocking notifications and their centre",
+   "status": "done",
+   "note": "Corner toasts plus a searchable centre.",
+   "proof": "public/js/core/feedback.js"
+  },
+  {
+   "area": "Records and messages",
+   "id": "dockview-workspace",
+   "title": "Dockable workspace",
+   "status": "missing",
+   "note": "Not built; tabs only."
+  },
+  {
+   "area": "Records and messages",
+   "id": "rich-text-editor",
+   "title": "Rich text editor",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Built-in tools",
+   "id": "file-converter",
+   "title": "Local file converter",
+   "status": "partial",
+   "note": "In progress."
+  },
+  {
+   "area": "Built-in tools",
+   "id": "base64-tools",
+   "title": "Base64 toolkit",
+   "status": "partial",
+   "note": "In progress."
+  },
+  {
+   "area": "Built-in tools",
+   "id": "quicktype-studio",
+   "title": "Type generator and JSON editor",
+   "status": "partial",
+   "note": "In progress."
+  },
+  {
+   "area": "Built-in tools",
+   "id": "virtual-disk-manager",
+   "title": "Virtual disk manager",
+   "status": "missing",
+   "note": "Not built; needs a Windows host."
+  },
+  {
+   "area": "Built-in tools",
+   "id": "minecraft-server-manager",
+   "title": "Minecraft server manager",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Built-in tools",
+   "id": "minecraft-world-generator",
+   "title": "Minecraft world generator",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Built-in tools",
+   "id": "ollama-suite",
+   "title": "Local Ollama suite",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Built-in tools",
+   "id": "external-editor",
+   "title": "External editor hand-off",
+   "status": "partial",
+   "note": "Workflow preview downloads; no direct editor launch.",
+   "proof": "public/js/views/workflows.js"
+  },
+  {
+   "area": "Built-in tools",
+   "id": "download-handoff",
+   "title": "Browser-extension download hand-off",
+   "status": "na",
+   "note": "There is no browser extension."
+  },
+  {
+   "area": "Built-in tools",
+   "id": "forge-publishing",
+   "title": "Publishing to a forge",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Built-in tools",
+   "id": "progress-recovery",
+   "title": "Progress where it started, recovery where it broke",
+   "status": "done",
+   "note": "Stage progress per run; journal resume after restarts.",
+   "proof": "src/jobs.js"
+  },
+  {
+   "area": "Built-in tools",
+   "id": "drawesome-drawing",
+   "title": "Drawing and annotation",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Completeness and evidence",
+   "id": "completeness-parity",
+   "title": "Completeness inventory",
+   "status": "done",
+   "note": "This page, checked by a test.",
+   "proof": "test/completeness.test.js"
+  },
+  {
+   "area": "Completeness and evidence",
+   "id": "front-provenance",
+   "title": "Front-screen version and updated-at",
+   "status": "done",
+   "note": "From the build, or the git checkout; unknown stays unknown.",
+   "proof": "src/server.js"
+  },
+  {
+   "area": "Completeness and evidence",
+   "id": "product-evidence",
+   "title": "Real screenshots wherever a surface is described",
+   "status": "missing",
+   "note": "No screenshots yet."
+  },
+  {
+   "area": "Completeness and evidence",
+   "id": "screen-recording",
+   "title": "Screen recording",
+   "status": "missing",
+   "note": "Not recorded."
+  },
+  {
+   "area": "Completeness and evidence",
+   "id": "design-reference-parity",
+   "title": "Design reference parity",
+   "status": "partial",
+   "note": "Design canvas exists; no automated comparison.",
+   "proof": "design/canvas"
+  },
+  {
+   "area": "Completeness and evidence",
+   "id": "design-folder",
+   "title": "Design files in the design/ folder",
+   "status": "done",
+   "note": "Canvas source and handoff notes.",
+   "proof": "design/canvas"
+  },
+  {
+   "area": "Completeness and evidence",
+   "id": "cheap-jor-matrix",
+   "title": "Browser and device test matrix",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Completeness and evidence",
+   "id": "public-huishot-gallery",
+   "title": "Public screenshot gallery",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Documentation site",
+   "id": "landing-site",
+   "title": "Documentation site carrying every feature",
+   "status": "partial",
+   "note": "Site exists; does not cover every feature.",
+   "proof": "docs/index.html"
+  },
+  {
+   "area": "Documentation site",
+   "id": "deen-wah-site",
+   "title": "Print-friendly site",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Documentation site",
+   "id": "installer-download-button",
+   "title": "Verified installer download",
+   "status": "na",
+   "note": "Distributed as a Docker image, not an installer."
+  },
+  {
+   "area": "Documentation site",
+   "id": "feature-articles",
+   "title": "One article per feature",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Documentation site",
+   "id": "vendored-fonts",
+   "title": "Vendored fonts",
+   "status": "missing",
+   "note": "Uses system fonts; no vendored set."
+  },
+  {
+   "area": "Documentation site",
+   "id": "shared-link-embed",
+   "title": "Link preview picture",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Documentation site",
+   "id": "homepage-link",
+   "title": "Site linked from the repository",
+   "status": "done",
+   "note": "Linked in the README.",
+   "proof": "README.md"
+  },
+  {
+   "area": "Documentation site",
+   "id": "vocabulary-unlock-boundary",
+   "title": "Personal wording only after sign-in",
+   "status": "partial",
+   "note": "Personal wording is local to the browser and never served; there is no sign-in gate on the site.",
+   "proof": "public/js/core/vocab.js"
+  },
+  {
+   "area": "Documentation site",
+   "id": "private-day-teet-hui-app",
+   "title": "Private site as a packaged app",
+   "status": "na",
+   "note": "The site is public."
+  },
+  {
+   "area": "Documentation site",
+   "id": "day-teet-hui-pdf-edition",
+   "title": "PDF edition of the site",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Status hub",
+   "id": "status-hub",
+   "title": "Status hub registration",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Status hub",
+   "id": "discord-status-bridge",
+   "title": "Discord status bridge",
+   "status": "na",
+   "note": "Status hub only."
+  },
+  {
+   "area": "Status hub",
+   "id": "panic-webhooks",
+   "title": "Verified panic dispatch",
+   "status": "na",
+   "note": "Status hub only."
+  },
+  {
+   "area": "Status hub",
+   "id": "tidbyt-displays",
+   "title": "Tidbyt status frames",
+   "status": "na",
+   "note": "Status hub only."
+  },
+  {
+   "area": "Build and install",
+   "id": "build-entrypoints",
+   "title": "Root build.bat and build-installer.bat",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Build and install",
+   "id": "fresh-build-run-command",
+   "title": "One build-and-run command",
+   "status": "partial",
+   "note": "docker run documented; no single script.",
+   "proof": "README.md"
+  },
+  {
+   "area": "Build and install",
+   "id": "interactive-setup",
+   "title": "Interactive setup",
+   "status": "missing",
+   "note": "No terminal setup tool."
+  },
+  {
+   "area": "Build and install",
+   "id": "dependency-fetcher",
+   "title": "One-click dependency fetcher",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Build and install",
+   "id": "bundled-dependencies",
+   "title": "Bundled dependencies",
+   "status": "done",
+   "note": "The Docker image bundles Node, dependencies and the GitHub CLI.",
+   "proof": "Dockerfile"
+  },
+  {
+   "area": "Build and install",
+   "id": "squirrel-installer",
+   "title": "Squirrel.Windows installer",
+   "status": "missing",
+   "note": "Not built; web app and Docker image only."
+  },
+  {
+   "area": "Build and install",
+   "id": "self-signing",
+   "title": "Self-signing",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Build and install",
+   "id": "auto-updates",
+   "title": "Automatic updates",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Build and install",
+   "id": "app-icon",
+   "title": "Original logo and icon",
+   "status": "done",
+   "note": "Original icon.",
+   "proof": "public/icon.svg"
+  },
+  {
+   "area": "Release pipeline",
+   "id": "release-workflow",
+   "title": "A release on every push",
+   "status": "missing",
+   "note": "CI runs on every push; no release is published."
+  },
+  {
+   "area": "Release pipeline",
+   "id": "release-timing",
+   "title": "Workflow timing in release notes",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Release pipeline",
+   "id": "release-line-counts",
+   "title": "Line counts in releases",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Release pipeline",
+   "id": "release-dim-sum-photo",
+   "title": "Dim-sum photo in releases",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Release pipeline",
+   "id": "dim-sum-code-names",
+   "title": "Dim sum release code names",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Release pipeline",
+   "id": "ci-bootstrap",
+   "title": "CI dependency bootstrap and safe outputs",
+   "status": "done",
+   "note": "npm ci with a lockfile; read-only permissions.",
+   "proof": ".github/workflows/ci.yml"
+  },
+  {
+   "area": "Release pipeline",
+   "id": "runner-selection",
+   "title": "Live runner selection",
+   "status": "partial",
+   "note": "Runner picker in the app; CI runners are fixed.",
+   "proof": "public/js/views/workflows.js"
+  },
+  {
+   "area": "Release pipeline",
+   "id": "encrypted-public-builder",
+   "title": "Encrypted public builder",
+   "status": "done",
+   "note": "Core feature of the app.",
+   "proof": "src/jobs.js"
+  },
+  {
+   "area": "Repository records",
+   "id": "tabbed-readme",
+   "title": "Tabbed README",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Repository records",
+   "id": "human-time-estimate",
+   "title": "Human time estimate",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Repository records",
+   "id": "sanitized-instruction-copy",
+   "title": "Sanitized instruction copy",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Repository records",
+   "id": "agents-md-vocabulary-block",
+   "title": "AGENTS.md wording block",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Repository records",
+   "id": "vocabulary-hash-lock",
+   "title": "Wording hash lock",
+   "status": "done",
+   "note": "Hashed leak test over every text file.",
+   "proof": "test/public-language.test.js"
+  },
+  {
+   "area": "Repository records",
+   "id": "roadmap-checklist",
+   "title": "ROADMAP.md checklist",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Repository records",
+   "id": "feature-docs",
+   "title": "One Markdown file per feature",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Repository records",
+   "id": "postman-collections",
+   "title": "Postman collection for the HTTP API",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Repository records",
+   "id": "wiki-day-teet-hui-sync",
+   "title": "Wiki and site kept current",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Repository records",
+   "id": "handoff-record",
+   "title": "HANDOFF.md",
+   "status": "partial",
+   "note": "Design handoff only.",
+   "proof": "design/canvas/HANDOFF.md"
+  },
+  {
+   "area": "Repository records",
+   "id": "closeout-prompt",
+   "title": "CLOSEOUT_PROMPT.md",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Repository records",
+   "id": "discussion-records",
+   "title": "Discussions as the running record",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Repository records",
+   "id": "project-board",
+   "title": "Linked GitHub Project",
+   "status": "missing",
+   "note": "Not built."
+  },
+  {
+   "area": "Repository records",
+   "id": "operational-skill",
+   "title": "Repository operational skill",
+   "status": "partial",
+   "note": "The mac-crypt action; no full skill.",
+   "proof": ".github/actions/mac-crypt/action.yml"
+  },
+  {
+   "area": "Canonical memory deliverables",
+   "id": "readme-prompt-banner",
+   "title": "README prompt banner",
+   "status": "na",
+   "note": "Memory repository only."
+  },
+  {
+   "area": "Canonical memory deliverables",
+   "id": "uh-single-file-editions",
+   "title": "Single-file editions",
+   "status": "na",
+   "note": "Memory repository only."
+  },
+  {
+   "area": "Canonical memory deliverables",
+   "id": "project-profile",
+   "title": "Project memory folders",
+   "status": "na",
+   "note": "Memory repository only."
+  },
+  {
+   "area": "Games",
+   "id": "roblox-model-catalogue",
+   "title": "Roblox model catalogue",
+   "status": "na",
+   "note": "Games only."
+  },
+  {
+   "area": "Games",
+   "id": "roblox-visual-realism",
+   "title": "Roblox visual realism",
+   "status": "na",
+   "note": "Games only."
+  }
+ ]
+}

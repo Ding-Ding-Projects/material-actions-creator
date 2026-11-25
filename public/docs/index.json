@@ -1,0 +1,11 @@
+{
+  "pages": [
+    { "id": "getting-started", "title": "Getting started", "file": "getting-started.md" },
+    { "id": "run-modes", "title": "Run modes", "file": "run-modes.md" },
+    { "id": "workflows", "title": "Workflows and scripts", "file": "workflows.md" },
+    { "id": "recovery", "title": "Restarts and recovery", "file": "recovery.md" },
+    { "id": "cli", "title": "Command line (mac)", "file": "cli.md" },
+    { "id": "personalize", "title": "Language, sound and personal wording", "file": "personalize.md" },
+    { "id": "keyboard", "title": "Keyboard and accessibility", "file": "keyboard.md" }
+  ]
+}

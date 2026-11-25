@@ -150,6 +150,9 @@ jobs:
           context: .
           load: true
           tags: material-actions-creator:ci
+          build-args: |
+            MAC_COMMIT=${{ github.sha }}
+            MAC_BUILT_AT=${{ github.event.head_commit.timestamp || github.event.pull_request.updated_at }}
       - name: GitHub CLI is bundled
         run: docker run --rm --entrypoint gh material-actions-creator:ci --version
       - name: Start container
@@ -161,6 +164,10 @@ jobs:
           curl -fsS http://localhost:8080/api/auth | tee auth.json
           grep -q '"ghAvailable":true' auth.json
           grep -q '"signedIn":false' auth.json
+          curl -fsS http://localhost:8080/api/provenance | tee prov.json
+          grep -q "\"commit\":\"${GITHUB_SHA:0:12}\"" prov.json
+          curl -fsS http://localhost:8080/completeness.json > /dev/null
+          curl -fsS http://localhost:8080/docs/index.json > /dev/null
           code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' \
             -d '{"dockerfile":"FROM alpine"}' http://localhost:8080/api/builds)
           test "$code" = "400"

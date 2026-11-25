@@ -14,6 +14,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY src ./src
 COPY public ./public
+ARG MAC_COMMIT=""
+ARG MAC_BUILT_AT=""
+ENV MAC_COMMIT=$MAC_COMMIT MAC_BUILT_AT=$MAC_BUILT_AT
 
 RUN mkdir -p /data/builds /data/gh && chown -R node:node /data \
     && chmod +x /app/src/cli.js && ln -s /app/src/cli.js /usr/local/bin/mac

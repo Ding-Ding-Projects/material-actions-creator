@@ -15,6 +15,22 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const PUBLIC_DIR = join(ROOT, 'public');
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
 
+// Version and "updated at" for the front screen. Values come from the build
+// (MAC_COMMIT / MAC_BUILT_AT) or the local git checkout; unknown stays null.
+export async function provenance(env = process.env) {
+  const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'));
+  let commit = env.MAC_COMMIT || null;
+  let updatedAt = env.MAC_BUILT_AT || null;
+  if (!commit) {
+    try {
+      const head = (await readFile(join(ROOT, '.git', 'HEAD'), 'utf8')).trim();
+      if (/^[0-9a-f]{40}$/.test(head)) commit = head;
+      else if (head.startsWith('ref: ')) commit = (await readFile(join(ROOT, '.git', head.slice(5)), 'utf8')).trim();
+    } catch { /* not a git checkout (worktrees and images) */ }
+  }
+  return { version: pkg.version, commit: commit ? commit.slice(0, 12) : null, updatedAt, source: env.MAC_COMMIT ? 'build' : commit ? 'git' : 'unknown' };
+}
+
 export function createApp(opts = {}) {
   const env = opts.env || process.env;
   const ghAuth = opts.ghAuth || new GhAuth({ env });
@@ -101,6 +117,7 @@ export function createApp(opts = {}) {
     const m = pathname.match(/^\/api\/builds\/([a-f0-9]+)(\/download|\/files\/(\d+))?$/);
 
     if (pathname === '/api/health') return json(res, 200, { ok: true });
+    if (pathname === '/api/provenance') return json(res, 200, await provenance(env));
     if (!authorized(req, url)) return json(res, 401, { error: 'Access key required.', accessKeyRequired: true });
 
     if (pathname === '/api/config' && req.method === 'GET') {
