@@ -148,7 +148,7 @@ function mount(el) {
       <div class="panel" data-ui="wf-where"><p class="step">${h('wf.where')}</p><div id="wfModes"></div></div>
     </section>
     <aside class="stack-col sticky">
-      <div class="yaml-card" data-ui="wf-yaml"><div class="yaml-head"><span>.github/workflows/mac-build.yml</span><span class="ok" id="wfYamlState"></span></div><pre id="wfYaml" class="yaml" tabindex="0"></pre></div>
+      <div class="yaml-card" data-ui="wf-yaml"><div class="yaml-head"><span>.github/workflows/mac-build.yml</span><span class="ok" id="wfYamlState"></span><button type="button" class="text-btn" id="wfLint">${h('ext.lint')}</button></div><pre id="wfYaml" class="yaml" tabindex="0"></pre><div id="wfLintOut" class="wf-lint" aria-live="polite"></div></div>
       <div class="run-bar"><span id="wfSummary" class="muted"></span>
         <button class="fab" id="wfRun" type="button" data-ui="wf-run">${h('wf.run')} <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
       <p class="hint" id="wfHint" role="alert"></p>
@@ -157,6 +157,11 @@ function mount(el) {
   $('#wfRepo').value = wf.repo; $('#wfRef').value = wf.ref; $('#wfOutputs').value = wf.outputs;
   for (const [sel, k] of [['#wfRepo', 'repo'], ['#wfRef', 'ref'], ['#wfOutputs', 'outputs']]) $(sel).addEventListener('input', (e) => { wf[k] = e.target.value; save(); schedule(); });
   el.addEventListener('click', async (e) => {
+    if (e.target.closest('#wfLint')) {
+      const { lintWorkflow, lintHtml } = await import('./extensions.js');
+      $('#wfLintOut').innerHTML = lintHtml(await lintWorkflow($('#wfYaml').dataset.yaml));
+      return;
+    }
     const s = wf.scripts;
     const up = e.target.closest('[data-sc-up]'); const down = e.target.closest('[data-sc-down]');
     if (up) { const i = +up.dataset.scUp; [s[i - 1], s[i]] = [s[i], s[i - 1]]; save(); renderScripts(); schedule(); return; }

@@ -1,5 +1,5 @@
 // Server API access, the access key, and the live event stream.
-const listeners = { build: new Set(), remove: new Set(), auth: new Set(), recovery: new Set(), hello: new Set(), connection: new Set() };
+const listeners = { build: new Set(), remove: new Set(), auth: new Set(), recovery: new Set(), hello: new Set(), connection: new Set(), extension: new Set(), extensions: new Set() };
 let key = '';
 try { key = sessionStorage.getItem('mac-key') || ''; } catch { /* ignore */ }
 let keyPrompt = () => {};
@@ -36,7 +36,7 @@ export function connect() {
   es?.close();
   es = new EventSource(withKey('/api/events'));
   es.addEventListener('open', () => emit('connection', true));
-  for (const ev of ['hello', 'build', 'remove', 'auth', 'recovery']) {
+  for (const ev of ['hello', 'build', 'remove', 'auth', 'recovery', 'extension', 'extensions']) {
     es.addEventListener(ev, (e) => emit(ev, JSON.parse(e.data)));
   }
   es.onerror = () => { emit('connection', false); es.close(); setTimeout(connect, 3000); };

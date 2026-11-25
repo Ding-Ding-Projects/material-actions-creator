@@ -62,6 +62,13 @@ test('built-in extensions start on, user extensions start off and need consent',
   assert.equal((await h.run('mine', 'command')).ok, true);
 });
 
+test('a user extension with no permissions still needs a first yes', async () => {
+  const { h } = await host(async ({ user }) => makeExt(user, base, `${READ}console.log(JSON.stringify({ok:true,result:{}}))`));
+  assert.equal(h.view('demo').needsConsent, true);
+  await assert.rejects(h.configure('demo', { enabled: true }), /permissions allowed/);
+  assert.equal((await h.configure('demo', { grant: [], enabled: true })).enabled, true);
+});
+
 test('a new permission in a newer version switches the extension off until allowed', async () => {
   const { h, user } = await host(async ({ user }) => makeExt(user, { ...base, permissions: ['build:read'] }, `${READ}console.log(JSON.stringify({ok:true,result:{items:[{label:'keys',value:Object.keys(req.payload).join(',')}]}}))`));
   await h.configure('demo', { grant: ['build:read'], enabled: true });

@@ -158,6 +158,12 @@ export class ExtensionHost extends EventEmitter {
     return e ? e.manifest.permissions.filter((p) => !granted.has(p)) : [];
   }
 
+  // A first run always needs a yes, even with no permissions: turning an
+  // extension on means letting its program run.
+  needsConsent(id) {
+    return this.pendingPermissions(id).length > 0 || !this.state[id]?.grantedVersion;
+  }
+
   view(id) {
     const e = this.exts.get(id);
     if (!e) return null;
@@ -165,10 +171,10 @@ export class ExtensionHost extends EventEmitter {
     const pending = this.pendingPermissions(id);
     return {
       ...e.manifest, source: e.source,
-      enabled: Boolean(s.enabled) && !pending.length,
+      enabled: Boolean(s.enabled) && !this.needsConsent(id),
       wantsEnabled: Boolean(s.enabled),
       granted: s.granted || [], grantedVersion: s.grantedVersion || null,
-      pendingPermissions: pending, needsConsent: pending.length > 0,
+      pendingPermissions: pending, needsConsent: this.needsConsent(id),
       lastRun: s.lastRun || null,
     };
   }
@@ -192,7 +198,7 @@ export class ExtensionHost extends EventEmitter {
       s.grantedVersion = e.manifest.version;
     }
     if (enabled !== undefined) {
-      if (enabled && this.pendingPermissions(id).length) throw Object.assign(new Error('This extension needs its permissions allowed before it can be turned on.'), { status: 409 });
+      if (enabled && this.needsConsent(id)) throw Object.assign(new Error('This extension needs its permissions allowed before it can be turned on.'), { status: 409 });
       s.enabled = Boolean(enabled);
     }
     await this.save();

@@ -298,7 +298,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const recovery = await jobs.load();
   if (recovery) console.log(`Resumed ${recovery.jobs.length} build(s) after ${Math.round(recovery.offlineMs / 1000)}s offline`);
   jobs.startHeartbeat();
-  server.listen(port, () => console.log(`material-actions-creator listening on http://0.0.0.0:${port}`));
+  const host = process.env.HOST || '0.0.0.0';
+  server.listen(port, host, () => console.log(`material-actions-creator listening on http://${host}:${port}`));
   if (process.env.SWEEP_ON_START !== 'false') {
     jobs.sweep().then((d) => d.length && console.log(`Swept ${d.length} leftover repos`)).catch(() => {});
   }
