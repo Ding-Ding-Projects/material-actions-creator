@@ -167,7 +167,7 @@ export async function provenance(target) {
 }
 
 export function register() {
-  registry.destination({ id: 'docs', titleKey: 'tab.docs', icon: '❏', order: 50, mount: mountDocs });
+  registry.destination({ id: 'docs', titleKey: 'tab.docs', icon: '❏', order: 55, mount: mountDocs });
   registry.destination({ id: 'changelog', titleKey: 'tab.changelog', icon: '✎', order: 60, mount: mountChangelog });
   registry.destination({ id: 'history', titleKey: 'tab.history', icon: '↺', order: 70, mount: mountHistory });
   registry.destination({ id: 'completeness', titleKey: 'tab.completeness', icon: '◔', order: 80, mount: mountCompleteness });

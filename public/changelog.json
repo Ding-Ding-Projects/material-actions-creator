@@ -5,16 +5,54 @@
       "date": "2026-11-24",
       "title": "A full app shell",
       "changes": [
-        { "type": "added", "text": "Browser-style tabs with every page open by default, pinning, reordering and an Open every tab catalog." },
-        { "type": "added", "text": "Ctrl+Shift+F command palette covering pages, commands and live settings." },
-        { "type": "added", "text": "A regex builder beside every search box, with flags, sample text, captures and export." },
-        { "type": "added", "text": "English, Cantonese and bilingual modes with two funny-level sliders and School mode." },
-        { "type": "added", "text": "Local personal wording: upload or drop a vocabulary JSON that rewrites any phrase, including failure messages." },
-        { "type": "added", "text": "Setup wizard, guided tour, offline documentation, this changelog and a completeness page." },
-        { "type": "added", "text": "Notification centre, action sounds, narration, settings history with restore, and export in nine formats." },
-        { "type": "added", "text": "Context menu on every element with copy, read aloud, lock, export and appearance options." },
-        { "type": "added", "text": "Bulk select, export and dismiss in Runs; two-key confirmation for destructive actions." },
-        { "type": "added", "text": "Front-screen version and updated-at, read from the build or the git checkout." }
+        {
+          "type": "added",
+          "text": "Browser-style tabs with every page open by default, pinning, reordering and an Open every tab catalog."
+        },
+        {
+          "type": "added",
+          "text": "Ctrl+Shift+F command palette covering pages, commands and live settings."
+        },
+        {
+          "type": "added",
+          "text": "A regex builder beside every search box, with flags, sample text, captures and export."
+        },
+        {
+          "type": "added",
+          "text": "English, Cantonese and bilingual modes with two funny-level sliders and School mode."
+        },
+        {
+          "type": "added",
+          "text": "Tools tab: Base64 toolkit, local file and image converter, and a JSON studio with a type generator."
+        },
+        {
+          "type": "added",
+          "text": "Per-element appearance editor, colour picker with format conversion and contrast checks, and logo choices."
+        },
+        {
+          "type": "added",
+          "text": "Local personal wording: upload or drop a vocabulary JSON that rewrites any phrase, including failure messages."
+        },
+        {
+          "type": "added",
+          "text": "Setup wizard, guided tour, offline documentation, this changelog and a completeness page."
+        },
+        {
+          "type": "added",
+          "text": "Notification centre, action sounds, narration, settings history with restore, and export in nine formats."
+        },
+        {
+          "type": "added",
+          "text": "Context menu on every element with copy, read aloud, lock, export and appearance options."
+        },
+        {
+          "type": "added",
+          "text": "Bulk select, export and dismiss in Runs; two-key confirmation for destructive actions."
+        },
+        {
+          "type": "added",
+          "text": "Front-screen version and updated-at, read from the build or the git checkout."
+        }
       ]
     },
     {
@@ -22,10 +60,22 @@
       "date": "2026-11-24",
       "title": "The repository's own workflows",
       "changes": [
-        { "type": "added", "text": "Run a repository's own workflows, rewritten for a safe temporary run, with sealed artifacts in encrypted mode." },
-        { "type": "added", "text": "The mac command line with assisted GitHub CLI sign-in." },
-        { "type": "added", "text": "Design canvas covering every surface." },
-        { "type": "fixed", "text": "Generated PowerShell steps no longer confuse YAML anchors." }
+        {
+          "type": "added",
+          "text": "Run a repository's own workflows, rewritten for a safe temporary run, with sealed artifacts in encrypted mode."
+        },
+        {
+          "type": "added",
+          "text": "The mac command line with assisted GitHub CLI sign-in."
+        },
+        {
+          "type": "added",
+          "text": "Design canvas covering every surface."
+        },
+        {
+          "type": "fixed",
+          "text": "Generated PowerShell steps no longer confuse YAML anchors."
+        }
       ]
     },
     {
@@ -33,9 +83,18 @@
       "date": "2026-11-24",
       "title": "Workflow creator and encrypted public builder",
       "changes": [
-        { "type": "added", "text": "Build scripts (.bat, .cmd, .ps1, .sh) from any repository on a chosen runner." },
-        { "type": "added", "text": "Encrypted public builder mode: only ciphertext ever reaches the public repository." },
-        { "type": "added", "text": "Builds survive app restarts through a journal and reattach to their runs." }
+        {
+          "type": "added",
+          "text": "Build scripts (.bat, .cmd, .ps1, .sh) from any repository on a chosen runner."
+        },
+        {
+          "type": "added",
+          "text": "Encrypted public builder mode: only ciphertext ever reaches the public repository."
+        },
+        {
+          "type": "added",
+          "text": "Builds survive app restarts through a journal and reattach to their runs."
+        }
       ]
     },
     {
@@ -43,8 +102,14 @@
       "date": "2026-11-23",
       "title": "First release",
       "changes": [
-        { "type": "added", "text": "Build Docker images on throwaway GitHub Actions repositories and download them." },
-        { "type": "added", "text": "Temporary repositories are deleted on success and failure, plus a sweeper for leftovers." }
+        {
+          "type": "added",
+          "text": "Build Docker images on throwaway GitHub Actions repositories and download them."
+        },
+        {
+          "type": "added",
+          "text": "Temporary repositories are deleted on success and failure, plus a sweeper for leftovers."
+        }
       ]
     }
   ]

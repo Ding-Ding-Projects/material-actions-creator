@@ -433,22 +433,25 @@
    "area": "Built-in tools",
    "id": "file-converter",
    "title": "Local file converter",
-   "status": "partial",
-   "note": "In progress."
+   "status": "done",
+   "note": "JSON, NDJSON, YAML, XML, CSV, TSV, Markdown and HTML tables, text encodings and PNG/JPEG/WebP/BMP images, all local.",
+   "proof": "public/js/tools/convert.js"
   },
   {
    "area": "Built-in tools",
    "id": "base64-tools",
    "title": "Base64 toolkit",
-   "status": "partial",
-   "note": "In progress."
+   "status": "done",
+   "note": "Text, files, data URIs, URL-safe alphabet, validation with exact positions, hex dump.",
+   "proof": "public/js/tools/base64.js"
   },
   {
    "area": "Built-in tools",
    "id": "quicktype-studio",
    "title": "Type generator and JSON editor",
    "status": "partial",
-   "note": "In progress."
+   "note": "JSON tree editor with undo and a built-in type generator for 7 languages; not the quicktype library itself.",
+   "proof": "public/js/tools/jsonstudio.js"
   },
   {
    "area": "Built-in tools",
