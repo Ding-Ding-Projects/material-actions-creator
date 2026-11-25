@@ -1,0 +1,38 @@
+# Rewritten by material-actions-creator from release.yml
+name: Release
+on:
+  workflow_dispatch: null
+permissions:
+  contents: read
+  actions: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "mac: unpack sources"
+        shell: bash
+        run: |
+          tar -xzf './src.tar.gz' --strip-components=1 -C '.'
+          rm -f './src.tar.gz'
+      - run: build\installer.bat
+        shell: cmd
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers
+          path: dist/*.exe
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "mac: unpack sources"
+        shell: bash
+        run: |
+          tar -xzf './src.tar.gz' --strip-components=1 -C '.'
+          rm -f './src.tar.gz'
+      - uses: actions/download-artifact@v4
+        with:
+          name: installers
+          path: dist
+      - uses: actions/download-artifact@v4

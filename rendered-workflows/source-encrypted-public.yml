@@ -1,0 +1,74 @@
+# Rewritten by material-actions-creator from release.yml
+name: Release
+on:
+  workflow_dispatch: null
+permissions:
+  contents: read
+  actions: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "mac: decrypt and unpack sources"
+        shell: bash
+        env:
+          MAC_KEY: ${{ secrets.MAC_KEY }}
+        run: |
+          cp './.mac/crypt.mjs' "$RUNNER_TEMP/mac-crypt.mjs"
+          node "$RUNNER_TEMP/mac-crypt.mjs" open './src.mac' "$RUNNER_TEMP/mac-src"
+          tar -xzf "$RUNNER_TEMP/mac-src/src.tar.gz" --strip-components=1 -C '.'
+          rm -rf "$RUNNER_TEMP/mac-src" './src.mac' './.mac'
+      - run: build\installer.bat
+        shell: cmd
+      - name: "mac: seal installers"
+        shell: bash
+        env:
+          MAC_KEY: ${{ secrets.MAC_KEY }}
+          MAC_GLOBS: dist/*.exe
+        run: |
+          node "$RUNNER_TEMP/mac-crypt.mjs" seal "$RUNNER_TEMP/mac-out-0.mac" . "$MAC_GLOBS"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-output-installers
+          path: ${{ runner.temp }}/mac-out-0.mac
+          compression-level: 0
+        name: "mac: upload sealed installers"
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "mac: decrypt and unpack sources"
+        shell: bash
+        env:
+          MAC_KEY: ${{ secrets.MAC_KEY }}
+        run: |
+          cp './.mac/crypt.mjs' "$RUNNER_TEMP/mac-crypt.mjs"
+          node "$RUNNER_TEMP/mac-crypt.mjs" open './src.mac' "$RUNNER_TEMP/mac-src"
+          tar -xzf "$RUNNER_TEMP/mac-src/src.tar.gz" --strip-components=1 -C '.'
+          rm -rf "$RUNNER_TEMP/mac-src" './src.mac' './.mac'
+      - uses: actions/download-artifact@v4
+        with:
+          name: mac-output-installers
+          path: ${{ runner.temp }}/mac-dl-1
+        name: "mac: download sealed installers"
+      - name: "mac: open installers"
+        shell: bash
+        env:
+          MAC_KEY: ${{ secrets.MAC_KEY }}
+          MAC_TARGET: dist
+        run: |
+          for f in "$RUNNER_TEMP/mac-dl-1"/*.mac "$RUNNER_TEMP/mac-dl-1"/*/*.mac; do [ -e "$f" ] || continue; node "$RUNNER_TEMP/mac-crypt.mjs" open "$f" "$MAC_TARGET"; done
+      - uses: actions/download-artifact@v4
+        name: "mac: download sealed artifacts"
+        with:
+          pattern: mac-output-*
+          path: ${{ runner.temp }}/mac-dl-2
+      - name: "mac: open artifacts"
+        shell: bash
+        env:
+          MAC_KEY: ${{ secrets.MAC_KEY }}
+          MAC_TARGET: .
+        run: |
+          for d in "$RUNNER_TEMP/mac-dl-2"/mac-output-*; do n=$(basename "$d"); n=${n#mac-output-}; for f in "$d"/*.mac; do node "$RUNNER_TEMP/mac-crypt.mjs" open "$f" "$MAC_TARGET/$n"; done; done

@@ -1,0 +1,51 @@
+name: "scripts-private"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  OUTPUT_GLOBS: "dist/**/*.exe,dist/**/*.msi"
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 180
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+      - name: Unpack sources
+        shell: bash
+        run: |
+          mkdir -p src
+          tar -xzf src.tar.gz --strip-components=1 -C src
+          rm -f src.tar.gz
+      - name: Run script 1
+        shell: cmd
+        working-directory: src
+        env:
+          SCRIPT: "build\\installer.bat"
+        run: |
+          call "%SCRIPT%"
+      - name: Run script 2
+        shell: pwsh
+        working-directory: src
+        env:
+          SCRIPT: "tools/pack.ps1"
+        run: |
+          & "./$env:SCRIPT"
+      - name: Run script 3
+        shell: bash
+        working-directory: src
+        env:
+          SCRIPT: "tools/x.sh"
+        run: |
+          bash "./$SCRIPT"
+      - name: Upload output
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-output
+          path: |
+            src/dist/**/*.exe
+            src/dist/**/*.msi
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error

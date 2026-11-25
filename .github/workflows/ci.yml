@@ -47,14 +47,28 @@ jobs:
         run: shellcheck scripts/run-linux.sh extension-samples/hello-shell/main.sh
       - name: Self-test (installs dependencies itself)
         run: scripts/run-linux.sh --self-test
-      - name: Unit file and menu entry are written
+      - name: systemd user service starts, answers and is removed
         run: |
-          export HOME="$RUNNER_TEMP/home"
-          mkdir -p "$HOME"
-          scripts/run-linux.sh --install-service --port 8123 || [ $? -eq 3 ]
-          grep -q 'Environment=PORT=8123' "$HOME/.config/systemd/user/material-actions-creator.service"
+          unit="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/material-actions-creator.service"
+          code=0
+          scripts/run-linux.sh --install-service --port 8123 || code=$?
+          grep -q 'Environment=PORT=8123' "$unit"
+          if [ "$code" -eq 0 ]; then
+            for _ in $(seq 1 50); do curl -fsS http://127.0.0.1:8123/api/health && break; sleep 0.2; done
+            curl -fsS http://127.0.0.1:8123/api/extensions | grep -q '"workflow-lint"'
+            systemctl --user is-active material-actions-creator.service
+          elif [ "$code" -eq 3 ]; then
+            echo "::notice::No systemd user manager on this runner; only the unit file was checked."
+          else
+            exit "$code"
+          fi
+          scripts/run-linux.sh --uninstall-service
+          test ! -e "$unit"
+          if curl -fsS http://127.0.0.1:8123/api/health; then echo "service still answering"; exit 1; fi
+      - name: Menu entry is written
+        run: |
           scripts/run-linux.sh --install-desktop
-          test -f "$HOME/.local/share/applications/material-actions-creator.desktop"
+          test -f "${XDG_DATA_HOME:-$HOME/.local/share}/applications/material-actions-creator.desktop"
       - name: Browser check in headless Chrome
         run: node scripts/browser-check.mjs --shots shots
       - uses: actions/upload-artifact@v4
