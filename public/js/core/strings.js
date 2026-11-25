@@ -360,6 +360,8 @@ export const STRINGS = {
   'menu.exportPage': { en: 'Export this page…', yue: '匯出呢頁…' },
   'menu.lock': { en: 'Lock this element', yue: '鎖住呢個元素' },
   'menu.unlock': { en: 'Unlock this element', yue: '解鎖呢個元素' },
+  'wf.previewEmpty': { en: 'Pick a repository and at least one script or workflow to see the generated workflow.', yue: '揀一個儲存庫同最少一個腳本或者工作流程，就會見到生成嘅工作流程。' },
+  'menu.unlockAll': { en: 'Unlock every element', yue: '解鎖所有元素' },
   'menu.locked': { en: 'This element is locked. Unlock it from its context menu.', yue: '呢個元素鎖咗，喺右擊選單解鎖。' },
 
   // Appearance editor

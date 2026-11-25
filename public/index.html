@@ -1,205 +1,70 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark" data-motion="full">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Material Actions Creator</title>
+  <meta name="description" content="Material Actions Creator turns repository build scripts, workflows and Dockerfiles into temporary GitHub Actions runs and hands back the outputs.">
   <meta name="theme-color" content="#0b0c10">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/css/shell.css">
+  <link rel="stylesheet" href="/css/appearance.css">
+  <link rel="stylesheet" href="/css/tools.css">
 </head>
 <body>
+  <a class="skip" href="#views" data-i18n="skip">Skip to content</a>
   <div class="aurora" aria-hidden="true"></div>
 
-  <header class="bar">
-    <a class="brand" href="/">
-      <img src="/icon.svg" alt="" width="34" height="34">
-      <span>Material<b>Actions</b>Creator</span>
+  <header class="bar" data-ui="topbar">
+    <a class="brand" href="/" data-ui="brand">
+      <img src="/icon.svg" alt="" width="34" height="34" data-logo>
+      <span class="brand-text"><span data-display-name>Material Actions Creator</span><small class="prov" data-provenance aria-live="polite">…</small></span>
     </a>
-    <nav class="tabs-nav" role="tablist" aria-label="Sections">
-      <button role="tab" type="button" data-tab="workflows" aria-selected="true">Workflows</button>
-      <button role="tab" type="button" data-tab="dockerfile" aria-selected="false">Dockerfile</button>
-      <button role="tab" type="button" data-tab="runs" aria-selected="false">Runs <span class="live-count" id="liveCount" hidden>0</span></button>
-    </nav>
-    <button class="account" id="accountBtn" type="button" aria-haspopup="dialog">
-      <span class="avatar" id="avatar"></span>
-      <span class="account-text">
-        <span id="accountName">Not signed in</span>
-        <span class="scope-dots" id="scopeDots"></span>
-      </span>
-    </button>
+    <div class="bar-tools">
+      <span class="conn" data-conn hidden></span>
+      <button class="icon-btn" type="button" id="paletteBtn" data-ui="palette-btn" data-i18n-aria="menu.palette" aria-label="Command palette" aria-keyshortcuts="Control+Shift+F"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><kbd>Ctrl ⇧ F</kbd></button>
+      <button class="icon-btn" type="button" id="notifyBtn" data-ui="notify-btn" data-i18n-aria="notify.center" aria-label="Notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span class="live-count" data-note-count hidden>0</span></button>
+      <button class="account" id="accountBtn" type="button" aria-haspopup="dialog" data-ui="account">
+        <span class="avatar" id="avatar"></span>
+        <span class="account-text"><span id="accountName">Not signed in</span><span class="scope-dots" id="scopeDots"></span></span>
+      </button>
+    </div>
   </header>
 
-  <div class="recovery" id="recovery" hidden>
+  <nav class="tabstrip" id="tabstrip" aria-label="Pages" data-ui="tabstrip"></nav>
+
+  <div class="recovery" id="recovery" role="status" hidden data-ui="recovery">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <div>
-      <strong id="recoveryTitle">The app was offline</strong>
-      <span id="recoveryBody"></span>
-    </div>
-    <button class="btn quiet" type="button" id="recoveryView">View runs</button>
-    <button class="icon-btn" type="button" id="recoveryDismiss" aria-label="Dismiss">×</button>
+    <div><strong id="recoveryTitle"></strong> <span id="recoveryBody"></span></div>
+    <button class="btn quiet" type="button" id="recoveryView" data-i18n="recovery.view">View runs</button>
+    <button class="icon-btn" type="button" id="recoveryDismiss" data-i18n-aria="common.close" aria-label="Close">×</button>
   </div>
 
-  <!-- Workflows: repository build scripts in, outputs out -->
-  <main class="view layout" id="view-workflows" data-view="workflows">
-    <section class="stack-col">
-      <div class="hero-head">
-        <p class="eyebrow">New workflow</p>
-        <h1>Repo in.<br><em>Installer out.</em></h1>
-      </div>
+  <div class="views" id="views" tabindex="-1"></div>
 
-      <div class="panel">
-        <p class="step">01 · Source</p>
-        <div class="field-row">
-          <label class="field grow"><span>Repository</span><input id="wfRepo" placeholder="owner/name" spellcheck="false" autocomplete="off"></label>
-          <label class="field"><span>Branch or tag</span><input id="wfRef" placeholder="default branch" spellcheck="false" autocomplete="off"></label>
-          <button class="btn scan" type="button" id="wfScan">Scan for scripts</button>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head"><p class="step">02 · Build scripts</p><span class="muted small" id="wfScriptHint">Scan a repository to find .bat, .cmd, .ps1 and .sh files</span></div>
-        <div class="select-all"><button class="text-btn" type="button" id="wfAllScripts">Run all scripts</button><button class="text-btn quiet-link" type="button" id="wfNoScripts">None</button></div>
-        <ol class="script-list" id="wfScripts"></ol>
-        <div class="add-script">
-          <input id="wfAddScript" placeholder="or type a path, e.g. build\installer.bat" spellcheck="false" aria-label="Script path">
-          <button class="btn" type="button" id="wfAddScriptBtn">Add</button>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head"><p class="step">03 · The repository's own workflows</p><span class="muted small" id="wfWorkflowHint">Scan to list .github/workflows</span></div>
-        <p class="muted small explain">Each chosen workflow runs inside the temporary repository: triggers become a manual start, permissions become read-only, publishing steps are removed, and in encrypted mode every artifact is sealed before upload.</p>
-        <div class="select-all"><button class="text-btn" type="button" id="wfAllWorkflows">Run all workflows</button><button class="text-btn quiet-link" type="button" id="wfNoWorkflows">None</button></div>
-        <ol class="script-list" id="wfWorkflows"></ol>
-      </div>
-
-      <div class="split">
-        <div class="panel">
-          <p class="step">04 · Runner for scripts</p>
-          <div class="chips" id="wfRunners" role="radiogroup" aria-label="Runner"></div>
-        </div>
-        <div class="panel">
-          <p class="step">05 · Outputs from scripts</p>
-          <label class="field"><span>Output files (globs, relative to the repository)</span>
-            <input id="wfOutputs" value="dist/**/*.exe, dist/**/*.msi" spellcheck="false"></label>
-        </div>
-      </div>
-
-      <div class="panel">
-        <p class="step">06 · Where it runs</p>
-        <div class="modes" data-mode-group="wf"></div>
-      </div>
-    </section>
-
-    <aside class="stack-col sticky">
-      <div class="yaml-card">
-        <div class="yaml-head"><span>.github/workflows/mac-build.yml</span><span class="ok" id="wfYamlState">live preview</span></div>
-        <pre id="wfYaml" class="yaml"></pre>
-      </div>
-      <div class="run-bar">
-        <span id="wfSummary" class="muted"></span>
-        <button class="fab" id="wfRun" type="button">Run build
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-      </div>
-      <p class="hint" id="wfHint"></p>
-      <button class="text-btn center" type="button" id="wfExport">Download workflow YAML</button>
-    </aside>
-  </main>
-
-  <!-- Dockerfile: instructions in, image out -->
-  <main class="view layout" id="view-dockerfile" data-view="dockerfile" hidden>
-    <section class="compose card-xl" aria-labelledby="composeTitle">
-      <p class="eyebrow">Dockerfile</p>
-      <h1 id="composeTitle">Dockerfile in.<br><em>Image out.</em></h1>
-      <p class="lede">Each build runs in a throwaway repository on GitHub Actions. The image comes back as a <code>.tar.gz</code> and the repository is deleted.</p>
-
-      <div class="field-row">
-        <label class="field grow">
-          <span>Image name</span>
-          <input id="imageName" value="my-app:latest" spellcheck="false" autocomplete="off">
-        </label>
-        <div class="field">
-          <span>Platform</span>
-          <div class="segmented" id="platforms" role="radiogroup" aria-label="Platform"></div>
-        </div>
-      </div>
-
-      <div class="templates" id="templates" aria-label="Starter templates"></div>
-
-      <div class="editor-shell">
-        <div class="tabs" id="tabs" role="tablist"></div>
-        <div class="editor">
-          <div class="gutter" id="gutter" aria-hidden="true"></div>
-          <div class="code-wrap">
-            <pre class="highlight" id="highlight" aria-hidden="true"></pre>
-            <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="File contents"></textarea>
-          </div>
-        </div>
-      </div>
-
-      <details class="args">
-        <summary>Build arguments <span id="argCount" class="pill">0</span></summary>
-        <div id="argList"></div>
-        <button class="text-btn" id="addArg" type="button">+ Add argument</button>
-      </details>
-    </section>
-
-    <aside class="stack-col sticky">
-      <div class="panel">
-        <p class="step">Where it runs</p>
-        <div class="modes stacked" data-mode-group="docker"></div>
-      </div>
-      <div class="run-bar">
-        <span class="muted" id="dockerSummary"></span>
-        <button class="fab" id="buildBtn" type="button">Build image
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-      </div>
-      <p class="hint" id="formHint"></p>
-    </aside>
-  </main>
-
-  <!-- Runs -->
-  <main class="view runs-view" id="view-runs" data-view="runs" hidden>
-    <div class="runs-head">
-      <div>
-        <p class="eyebrow">Runs</p>
-        <h2>Pipeline</h2>
-      </div>
-      <button class="text-btn" id="sweepBtn" type="button" title="Delete leftover temporary repositories">Sweep leftovers</button>
-    </div>
-    <div id="runList" class="run-list"></div>
-    <div id="emptyRuns" class="empty">
-      <div class="empty-art" aria-hidden="true"><span></span><span></span><span></span></div>
-      <p>No builds yet. Start one from Workflows or Dockerfile — runs stream in here live, and keep going even if you close this page.</p>
-    </div>
-  </main>
-
-  <dialog id="authDialog" class="sheet">
+  <dialog id="authDialog" class="sheet" data-ui="auth-dialog">
     <form method="dialog" class="sheet-inner">
-      <button class="close" value="close" aria-label="Close">×</button>
+      <button class="close" value="close" data-i18n-aria="common.close" aria-label="Close">×</button>
       <p class="eyebrow">GitHub CLI</p>
       <h2 id="authTitle">Sign in</h2>
       <div id="authBody"></div>
     </form>
   </dialog>
 
-  <dialog id="keyDialog" class="sheet">
+  <dialog id="keyDialog" class="sheet" data-ui="key-dialog">
     <form class="sheet-inner" id="keyForm">
-      <p class="eyebrow">Locked</p>
-      <h2>Access key</h2>
-      <p class="muted">This server is protected. Enter the key set in <code>APP_ACCESS_KEY</code>.</p>
-      <label class="field"><span>Key</span><input id="keyInput" type="password" autocomplete="current-password"></label>
-      <div class="actions"><button class="fab small" type="submit">Unlock</button></div>
+      <p class="eyebrow" data-i18n="key.eyebrow">Locked</p>
+      <h2 data-i18n="key.title">Access key</h2>
+      <p class="muted" data-i18n="key.body">This server is protected. Enter the access key set on the server.</p>
+      <label class="field"><span data-i18n="key.label">Key</span><input id="keyInput" type="password" autocomplete="current-password" required></label>
+      <div class="actions"><button class="fab small" type="submit" data-i18n="key.unlock">Unlock</button></div>
     </form>
   </dialog>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="dropzone" id="dropzone" hidden aria-hidden="true"><div><strong data-i18n="drop.title">Drop to apply your personal wording</strong><span data-i18n="drop.body">The file stays in this browser.</span></div></div>
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+  <noscript><p class="noscript">This app needs JavaScript.</p></noscript>
   <script type="module" src="/app.js"></script>
 </body>
 </html>

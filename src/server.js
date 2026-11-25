@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { execFile } from 'node:child_process';
 import { createReadStream } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join, extname, normalize, dirname } from 'node:path';
@@ -23,10 +24,25 @@ export async function provenance(env = process.env) {
   let updatedAt = env.MAC_BUILT_AT || null;
   if (!commit) {
     try {
-      const head = (await readFile(join(ROOT, '.git', 'HEAD'), 'utf8')).trim();
+      let gitDir = join(ROOT, '.git');
+      const dotGit = await readFile(gitDir, 'utf8').catch(() => null); // worktrees: "gitdir: <path>"
+      if (dotGit?.startsWith('gitdir: ')) gitDir = dotGit.slice(8).trim();
+      const common = await readFile(join(gitDir, 'commondir'), 'utf8').then((c) => join(gitDir, c.trim())).catch(() => gitDir);
+      const head = (await readFile(join(gitDir, 'HEAD'), 'utf8')).trim();
       if (/^[0-9a-f]{40}$/.test(head)) commit = head;
-      else if (head.startsWith('ref: ')) commit = (await readFile(join(ROOT, '.git', head.slice(5)), 'utf8')).trim();
-    } catch { /* not a git checkout (worktrees and images) */ }
+      else if (head.startsWith('ref: ')) {
+        const ref = head.slice(5);
+        commit = (await readFile(join(gitDir, ref), 'utf8').catch(() => readFile(join(common, ref), 'utf8')).catch(async () => {
+          const packed = await readFile(join(common, 'packed-refs'), 'utf8');
+          return packed.split('\n').find((l) => l.endsWith(` ${ref}`))?.split(' ')[0] || '';
+        })).trim() || null;
+      }
+    } catch { /* not a git checkout (images) */ }
+    if (commit && !updatedAt) {
+      updatedAt = await new Promise((resolve) => {
+        execFile('git', ['log', '-1', '--format=%cI', commit], { cwd: ROOT, timeout: 3000 }, (err, out) => resolve(err ? null : out.trim() || null));
+      });
+    }
   }
   return { version: pkg.version, commit: commit ? commit.slice(0, 12) : null, updatedAt, source: env.MAC_COMMIT ? 'build' : commit ? 'git' : 'unknown' };
 }

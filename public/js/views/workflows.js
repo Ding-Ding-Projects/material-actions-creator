@@ -71,6 +71,12 @@ function highlightYaml(src) {
 async function preview() {
   const req = request();
   const state = $('#wfYamlState');
+  if (!req.repo || (!req.scripts.length && !req.workflows.length)) {
+    $('#wfYaml').innerHTML = esc(`# ${t('wf.previewEmpty')}\n`);
+    $('#wfYaml').dataset.yaml = '';
+    state.innerHTML = ''; state.className = 'muted';
+    return;
+  }
   if (!req.scripts.length && req.workflows.length) {
     $('#wfYaml').innerHTML = esc(`# ${req.workflows.join('\n# ')}\n`);
     $('#wfYaml').dataset.yaml = '';

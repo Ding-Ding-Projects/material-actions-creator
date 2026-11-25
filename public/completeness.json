@@ -3,8 +3,8 @@
  "features": [
   {
    "area": "Language and personalization",
-   "id": "job-experience-document-label",
-   "title": "Job experience document wording",
+   "id": "job-document-label",
+   "title": "Job-related document wording",
    "status": "na",
    "note": "The app has no job-related workflows."
   },
@@ -561,14 +561,14 @@
   },
   {
    "area": "Completeness and evidence",
-   "id": "cheap-jor-matrix",
+   "id": "device-test-matrix",
    "title": "Browser and device test matrix",
    "status": "missing",
    "note": "Not built."
   },
   {
    "area": "Completeness and evidence",
-   "id": "public-huishot-gallery",
+   "id": "public-screenshot-gallery",
    "title": "Public screenshot gallery",
    "status": "missing",
    "note": "Not built."
@@ -583,7 +583,7 @@
   },
   {
    "area": "Documentation site",
-   "id": "deen-wah-site",
+   "id": "print-friendly-site",
    "title": "Print-friendly site",
    "status": "missing",
    "note": "Not built."
@@ -634,14 +634,14 @@
   },
   {
    "area": "Documentation site",
-   "id": "private-day-teet-hui-app",
+   "id": "private-site-app",
    "title": "Private site as a packaged app",
    "status": "na",
    "note": "The site is public."
   },
   {
    "area": "Documentation site",
-   "id": "day-teet-hui-pdf-edition",
+   "id": "site-pdf-edition",
    "title": "PDF edition of the site",
    "status": "missing",
    "note": "Not built."
@@ -858,7 +858,7 @@
   },
   {
    "area": "Repository records",
-   "id": "wiki-day-teet-hui-sync",
+   "id": "wiki-site-sync",
    "title": "Wiki and site kept current",
    "status": "missing",
    "note": "Not built."
@@ -909,7 +909,7 @@
   },
   {
    "area": "Canonical memory deliverables",
-   "id": "uh-single-file-editions",
+   "id": "memory-single-file-editions",
    "title": "Single-file editions",
    "status": "na",
    "note": "Memory repository only."

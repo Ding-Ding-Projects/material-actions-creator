@@ -115,5 +115,5 @@ export function init() {
     if (locked) { e.preventDefault(); e.stopPropagation(); notify(t('menu.locked'), { kind: 'warn', speak: false }); }
   }, true);
   addEventListener('blur', close);
-  registry.command({ id: 'menu.unlockAll', title: 'Unlock every element', run: () => { store.set('lockedElements', []); applyLocks(); } });
+  registry.command({ id: 'menu.unlockAll', titleKey: 'menu.unlockAll', run: () => { store.set('lockedElements', []); applyLocks(); } });
 }
