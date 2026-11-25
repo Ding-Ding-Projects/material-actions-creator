@@ -1,0 +1,147 @@
+name: Release
+
+# Every push to main publishes a release with self-contained Linux packages.
+# The packages are installed and self-tested here before anything is published.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, verify and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Version, tag and code name
+        id: meta
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}-${GITHUB_RUN_NUMBER}"
+          names=("Har Gow" "Siu Mai" "Char Siu Bao" "Cheung Fun" "Lo Mai Gai" "Egg Tart" "Turnip Cake" "Spring Roll" "Phoenix Claws" "Custard Bun" "Sesame Ball" "Wu Gok" "Ham Sui Gok" "Fun Gor" "Ma Lai Go" "Pineapple Bun" "Taro Cake" "Xiao Long Bao" "Jin Deui" "Beef Ball")
+          code="${names[$(( GITHUB_RUN_NUMBER % ${#names[@]} ))]}"
+          previous="$(gh release list --limit 1 --json tagName -q '.[0].tagName' || true)"
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "code=$code"
+            echo "previous=$previous"
+          } >> "$GITHUB_OUTPUT"
+      - name: Install and test
+        run: |
+          npm ci
+          npm test
+      - name: Build packages
+        env:
+          MAC_COMMIT: ${{ github.sha }}
+          MAC_BUILT_AT: ${{ github.event.head_commit.timestamp }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/appimagetool" https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x "$RUNNER_TEMP/appimagetool"
+          # shellcheck disable=SC2016
+          printf '#!/bin/sh\nexec "%s" --appimage-extract-and-run "$@"\n' "$RUNNER_TEMP/appimagetool" > "$RUNNER_TEMP/appimagetool-run"
+          chmod +x "$RUNNER_TEMP/appimagetool-run"
+          APPIMAGETOOL="$RUNNER_TEMP/appimagetool-run" scripts/build-packages.sh "$VERSION"
+          test -n "$(find dist -name '*.AppImage')"
+      - name: Verify the .deb by installing it
+        run: |
+          sudo dpkg -i dist/*.deb
+          cd "$RUNNER_TEMP"
+          env -i PATH=/usr/bin:/bin HOME="$RUNNER_TEMP/deb-home" material-actions-creator --self-test
+          env -i PATH=/usr/bin:/bin HOME="$RUNNER_TEMP/deb-home" material-actions-creator cli --version
+          test -f /usr/lib/systemd/user/material-actions-creator.service
+          sudo dpkg -r material-actions-creator
+          test ! -e /opt/material-actions-creator
+      - name: Verify the tarball and the AppImage by running them
+        run: |
+          mkdir "$RUNNER_TEMP/tar" && tar -xzf dist/*.tar.gz -C "$RUNNER_TEMP/tar"
+          cd "$RUNNER_TEMP"
+          env -i PATH=/usr/bin:/bin HOME="$RUNNER_TEMP/tar-home" "$RUNNER_TEMP"/tar/material-actions-creator/bin/material-actions-creator --self-test
+          chmod +x "$GITHUB_WORKSPACE"/dist/*.AppImage
+          env -i PATH=/usr/bin:/bin HOME="$RUNNER_TEMP/app-home" "$GITHUB_WORKSPACE"/dist/*.AppImage --appimage-extract-and-run --self-test
+      - name: Write release notes
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          CODE: ${{ steps.meta.outputs.code }}
+          PREVIOUS: ${{ steps.meta.outputs.previous }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          count() { git ls-files -z -- "$@" | xargs -0 -r cat | wc -l | tr -d ' '; }
+          {
+            echo "## ${TAG} — ${CODE}"
+            echo
+            echo "Self-contained Linux packages. Each one ships its own Node.js, so nothing else needs installing. The .deb, the tarball and the AppImage were each installed or unpacked and self-tested on a fresh runner before this release was published."
+            echo
+            echo '```sh'
+            echo "sudo dpkg -i material-actions-creator_${VERSION}_amd64.deb"
+            echo "material-actions-creator                     # http://127.0.0.1:8080"
+            echo '```'
+            echo
+            echo "### Changes"
+            echo
+            if [ -n "$PREVIOUS" ] && git rev-parse -q --verify "refs/tags/$PREVIOUS" >/dev/null; then
+              git log --no-merges --format='- %s (%h)' "$PREVIOUS..HEAD" | head -n 50
+            else
+              git log --no-merges --format='- %s (%h)' -n 20
+            fi
+            echo
+            echo "### Line counts (counted by this workflow)"
+            echo
+            echo "| Part | Lines |"
+            echo "| --- | ---: |"
+            echo "| Server and CLI (\`src\`) | $(count 'src/*') |"
+            echo "| Web app (\`public\`, without vendored code) | $(count 'public/*' ':!public/vendor/*') |"
+            echo "| Tests (\`test\`) | $(count 'test/*') |"
+            echo "| Extensions and samples | $(count 'extensions/*' 'extension-samples/*') |"
+            echo "| Scripts and workflows | $(count 'scripts/*' '.github/*') |"
+            echo
+            echo "### Checksums (SHA-256)"
+            echo
+            echo '```'
+            cat dist/SHA256SUMS
+            echo '```'
+          } > notes.md
+          cat notes.md
+      - name: Publish
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          CODE: ${{ steps.meta.outputs.code }}
+        run: |
+          gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$TAG ($CODE)" --notes-file notes.md
+      - name: Add workflow timing to the notes
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          started="$(gh run view "$GITHUB_RUN_ID" --json createdAt -q .createdAt)"
+          finished="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          seconds=$(( $(date -u -d "$finished" +%s) - $(date -u -d "$started" +%s) ))
+          {
+            cat notes.md
+            echo
+            echo "### Workflow timing (UTC)"
+            echo
+            echo "- Started: $started"
+            echo "- Finished: $finished"
+            echo "- End to end: $(( seconds / 60 )) min $(( seconds % 60 )) s"
+          } > notes-final.md
+          gh release edit "$TAG" --notes-file notes-final.md
+          gh release view "$TAG" --json tagName,assets -q '.tagName + ": " + ([.assets[].name] | join(", "))'

@@ -10,6 +10,7 @@
 // user has approved for that extension. This is not an operating-system
 // sandbox: an extension is still a program running as the same user.
 import { spawn, spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { EventEmitter } from 'node:events';
 import { readFile, readdir, writeFile, mkdir, rename, rm, cp, mkdtemp, stat, lstat } from 'node:fs/promises';
 import { join, dirname, basename, resolve, sep } from 'node:path';
@@ -93,20 +94,34 @@ const under = (child, parent) => { const c = resolve(child); const p = resolve(p
 // Arguments for bubblewrap: a read-only system, no home folder, no app data,
 // no network unless allowed, and only the extension's own folders plus the
 // output files it was granted. Pure, so it can be tested without bubblewrap.
-export function bwrapArgs({ dir, home, hide = [], outputs = [], network = false, pathDirs = [], command, args = [] }) {
-  const hidden = [...new Set(hide.filter((h) => h && resolve(h) !== '/').map((h) => resolve(h)))];
+export function bwrapArgs({ dir, home, hide = [], tools = [], outputs = [], network = false, command, args = [] }) {
+  const hidden = [...new Set(hide.filter((h) => h && resolve(h) !== '/').map((h) => resolve(h)))].sort((x, y) => x.length - y.length);
   const out = ['--die-with-parent', '--new-session', '--unshare-all'];
   if (network) out.push('--share-net');
   out.push('--ro-bind', '/', '/', '--dev', '/dev', '--proc', '/proc', '--tmpfs', '/tmp');
   for (const h of hidden) out.push('--tmpfs', h);
-  // Programs installed under a hidden folder (for example a per-user Node.js) are put back read-only.
-  const tools = new Set();
-  for (const d of pathDirs) if (hidden.some((h) => under(d, h) && resolve(d) !== h)) tools.add(basename(d) === 'bin' ? dirname(resolve(d)) : resolve(d));
-  for (const t of tools) out.push('--ro-bind', t, t);
+  // Programs installed under a hidden folder (for example a per-user Node.js)
+  // are put back read-only; anything hidden inside them is hidden again.
+  for (const t of tools) {
+    out.push('--ro-bind', t, t);
+    for (const h of hidden) if (under(h, t)) out.push('--tmpfs', h);
+  }
   out.push('--ro-bind', dir, dir, '--bind', home, home);
   for (const o of outputs) out.push('--ro-bind', o, o);
   out.push('--chdir', dir, '--', command, ...args);
   return out;
+}
+
+// PATH folders that the sandbox would hide, so they can be put back. A Node.js
+// prefix (bin next to lib/node_modules) is put back whole.
+export function toolDirs(pathDirs, hidden) {
+  const out = new Set();
+  for (const d of pathDirs) {
+    const dirPath = resolve(d);
+    if (!existsSync(dirPath) || !hidden.some((h) => h && under(dirPath, h) && dirPath !== resolve(h))) continue;
+    out.add(basename(dirPath) === 'bin' && existsSync(join(dirname(dirPath), 'lib', 'node_modules')) ? dirname(dirPath) : dirPath);
+  }
+  return [...out];
 }
 
 export class ExtensionHost extends EventEmitter {
@@ -386,8 +401,9 @@ export class ExtensionHost extends EventEmitter {
     let argv = manifest.run.args;
     const iso = this.detectIsolation();
     if (iso.mode === 'bwrap') {
-      const pathDirs = env.PATH.split(':').filter(Boolean);
-      argv = bwrapArgs({ dir, home, hide: [homedir(), this.env.HOME, this.dataDir, ...this.hide], outputs, network, pathDirs, command, args: manifest.run.args });
+      // Only folders that exist can be hidden or put back.
+      const hide = [homedir(), this.env.HOME, this.dataDir, ...this.hide].filter((h) => h && existsSync(h));
+      argv = bwrapArgs({ dir, home, hide, tools: toolDirs(env.PATH.split(':').filter(Boolean), hide), outputs: outputs.filter((o) => existsSync(o)), network, command, args: manifest.run.args });
       command = 'bwrap';
     } else if (iso.required) {
       return { ok: false, error: 'Extensions are set to run only in a sandbox, and no sandbox is available on this computer.', bytes: 0 };

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { ExtensionHost, validateManifest, cleanResult, ManifestError, bwrapArgs } from '../src/extensions.js';
+import { ExtensionHost, validateManifest, cleanResult, ManifestError, bwrapArgs, toolDirs } from '../src/extensions.js';
 import { makeZip } from './helpers.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -235,16 +235,26 @@ test('gallery: add a bundled sample, upload a zip, reject unsafe zips, remove', 
 });
 
 test('sandbox arguments hide home and app data, and only open what was granted', () => {
-  const a = bwrapArgs({ dir: '/opt/app/extensions/x', home: '/data/extension-data/x', hide: ['/home/me', '/home/me', '/data', '/', undefined], outputs: ['/data/b1/files/out.bin'], pathDirs: ['/usr/bin', '/home/me/.nvm/versions/node/v22/bin'], command: 'node', args: ['main.mjs'] });
+  const a = bwrapArgs({ dir: '/opt/app/extensions/x', home: '/data/extension-data/x', hide: ['/home/me/.nvm/versions/node/v22/secret', '/home/me', '/home/me', '/data', '/', undefined], outputs: ['/data/b1/files/out.bin'], tools: ['/home/me/.nvm/versions/node/v22'], command: 'node', args: ['main.mjs'] });
   const s = a.join(' ');
   assert.ok(a.includes('--unshare-all') && !a.includes('--share-net'), 'no network by default');
-  assert.match(s, /--tmpfs \/home\/me --tmpfs \/data /);
+  assert.match(s, /--tmpfs \/data --tmpfs \/home\/me /, 'parents are hidden before what is inside them');
+  assert.match(s, /v22 --tmpfs \/home\/me\/\.nvm\/versions\/node\/v22\/secret --ro-bind \/opt/, 'hidden folders inside a tool folder stay hidden');
   assert.ok(!/--tmpfs \/ /.test(s), 'never hides the root');
   assert.match(s, /--ro-bind \/home\/me\/\.nvm\/versions\/node\/v22 \/home\/me\/\.nvm\/versions\/node\/v22/);
   assert.ok(s.indexOf('--tmpfs /data') < s.indexOf('--bind /data/extension-data/x'), 'own folder is put back after hiding app data');
   assert.match(s, /--ro-bind \/data\/b1\/files\/out\.bin \/data\/b1\/files\/out\.bin/);
   assert.deepEqual(a.slice(-3), ['--', 'node', 'main.mjs']);
   assert.ok(bwrapArgs({ dir: '/x', home: '/y', network: true, command: 'sh' }).includes('--share-net'));
+});
+
+test('tool folders: only existing PATH folders under a hidden folder are put back', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ext-tools-'));
+  await mkdir(join(root, 'home', 'node', 'bin'), { recursive: true });
+  await mkdir(join(root, 'home', 'node', 'lib', 'node_modules'), { recursive: true });
+  await mkdir(join(root, 'home', 'plain', 'bin'), { recursive: true });
+  const dirs = toolDirs([join(root, 'home', 'node', 'bin'), join(root, 'home', 'plain', 'bin'), join(root, 'home', 'missing', 'bin'), '/usr/bin', join(root, 'home')], [join(root, 'home')]);
+  assert.deepEqual(dirs, [join(root, 'home', 'node'), join(root, 'home', 'plain', 'bin')]);
 });
 
 test('isolation setting: off never sandboxes, require refuses to run without one', async () => {
