@@ -138,6 +138,12 @@ export class GitHubClient {
     return data.jobs || [];
   }
 
+  // Plain-text log of one job. Only available once the job has finished.
+  async jobLogs(owner, repo, jobId) {
+    const res = await this.request('GET', `/repos/${owner}/${repo}/actions/jobs/${jobId}/logs`, null, { raw: true, allow404: true });
+    return res ? res.text() : '';
+  }
+
   async runArtifacts(owner, repo, runId) {
     const data = await this.request('GET', `/repos/${owner}/${repo}/actions/runs/${runId}/artifacts`);
     return data.artifacts || [];

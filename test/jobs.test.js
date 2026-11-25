@@ -56,6 +56,13 @@ test('private Dockerfile build: commit, download and delete', async () => {
   assert.equal(gh.state.repos.size, 0, 'temporary repo must be deleted');
   assert.deepEqual(Object.keys(snapshot.files).sort(), ['.github/workflows/mac-build.yml', 'README.md', 'context/Dockerfile', 'context/app/run.sh']);
   assert.equal(snapshot.private, true);
+  // Step timings and the job log were captured before the repository was deleted.
+  assert.deepEqual(job.steps.map((x) => [x.name, x.conclusion, x.completedAt - x.startedAt]), [['Set up job', 'success', 3000], ['Run script 1', 'failure', 88000]]);
+  assert.equal(job.logUrl, `/api/builds/${job.id}/log`);
+  const log = await readFile(jobs.logPath(job.id), 'utf8');
+  assert.match(log, /^=== Docker build \/ build ===\n/);
+  assert.match(log, /building job \d+/);
+  assert.equal(job.log.truncated, false);
 });
 
 test('encrypted Dockerfile build: public repo holds only ciphertext, image comes back decrypted', async () => {

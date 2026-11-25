@@ -228,7 +228,8 @@ export function fakeGitHub({
         const c = state.failFiles.has(r.file) ? 'failure' : conclusion;
         return reply(200, { id: r.id, run_number: 1, status: done ? 'completed' : 'in_progress', conclusion: done ? c : null, html_url: `https://github.com/run/${r.id}` });
       }
-      if (method === 'GET' && (wm = rest.match(/^\/actions\/runs\/(\d+)\/jobs$/))) return reply(200, { jobs: [{ steps: [{ name: 'Run script 1', conclusion: 'failure' }] }] });
+      if (method === 'GET' && (wm = rest.match(/^\/actions\/runs\/(\d+)\/jobs$/))) return reply(200, { jobs: [{ id: Number(wm[1]) * 100, name: 'build', steps: [{ name: 'Set up job', number: 1, status: 'completed', conclusion: 'success', started_at: '2026-11-25T10:00:00Z', completed_at: '2026-11-25T10:00:03Z' }, { name: 'Run script 1', number: 2, status: 'completed', conclusion: 'failure', started_at: '2026-11-25T10:00:03Z', completed_at: '2026-11-25T10:01:31Z' }] }] });
+      if (method === 'GET' && (wm = rest.match(/^\/actions\/jobs\/(\d+)\/logs$/))) return new Response(`2026-11-25T10:00:03.0000000Z ##[group]Run script 1\n2026-11-25T10:00:04.0000000Z building job ${wm[1]}\n2026-11-25T10:01:31.0000000Z ##[endgroup]\n`, { status: 200 });
       if (method === 'GET' && (wm = rest.match(/^\/actions\/runs\/(\d+)\/artifacts$/))) {
         const r = state.runs.get(Number(wm[1]));
         return reply(200, { artifacts: r.artifacts.map((a) => ({ id: a.id, name: a.name })) });

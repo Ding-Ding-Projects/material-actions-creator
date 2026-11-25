@@ -61,6 +61,7 @@ export function stagesFor(mode) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 class Interrupted extends Error {}
+const LOG_CAP = 2 * 1024 * 1024;
 
 export class JobManager extends EventEmitter {
   constructor({
@@ -104,6 +105,7 @@ export class JobManager extends EventEmitter {
       stages: j.stages.map((s) => ({ ...s })),
       outputs: (j.outputs || []).map((o, index) => ({ index, name: o.name, size: o.size, url: ready ? `/api/builds/${j.id}/files/${index}` : null })),
       downloadUrl: ready && j.outputs?.length ? `/api/builds/${j.id}/files/0` : null,
+      logUrl: j.log ? `/api/builds/${j.id}/log` : null,
     };
   }
 
@@ -344,12 +346,13 @@ export class JobManager extends EventEmitter {
           Object.assign(t, { status: run.status, conclusion: run.conclusion, url: run.html_url || t.url });
         }
         const done = p.targets.filter((t) => t.status === 'completed').length;
-        this.update(job, { runs: publicRuns(p.targets) });
+        this.update(job, { runs: publicRuns(p.targets), steps: await this.snapshotSteps(job, gh, owner, p.targets) });
         if (done === p.targets.length) break;
         this.stage(job, 'build', 'active', p.targets.length === 1 ? p.targets[0].status.replace('_', ' ') : `${done}/${p.targets.length} runs finished`);
         if (this.stopped) throw new Interrupted('stopping');
         await this.sleep(this.pollMs);
       }
+      await this.captureLogs(job, gh, owner, p.targets);
       const failedRuns = p.targets.filter((t) => t.conclusion !== 'success');
       const problems = [];
       for (const t of failedRuns) {
@@ -383,6 +386,62 @@ export class JobManager extends EventEmitter {
         await this.finish(job, { gh, revocable, owner, failed, mayHaveRepo });
       }
     }
+  }
+
+  // Step names, states and timings for every run of this build, for the live
+  // view and the timing chart. Best effort: a failed lookup keeps the last list.
+  async snapshotSteps(job, gh, owner, targets) {
+    const steps = [];
+    const ms = (v) => (v ? Date.parse(v) || null : null);
+    try {
+      for (const t of targets) {
+        if (!t.runId) continue;
+        const jobs = await gh.runJobs(owner, job.repo, t.runId);
+        t.jobIds = jobs.filter((j) => j.id).map((j) => ({ id: j.id, name: j.name || '' }));
+        for (const j of jobs) {
+          for (const st of j.steps || []) {
+            steps.push({ run: t.name, job: j.name || '', name: String(st.name || '').slice(0, 200), number: st.number ?? steps.length + 1, status: st.status || (st.conclusion ? 'completed' : 'queued'), conclusion: st.conclusion || null, startedAt: ms(st.started_at), completedAt: ms(st.completed_at) });
+          }
+        }
+      }
+    } catch { return job.steps || []; }
+    return steps.slice(0, 500);
+  }
+
+  // Saves the job logs before the temporary repository is deleted. Capped so a
+  // noisy build cannot fill the disk; the build never fails because of this.
+  async captureLogs(job, gh, owner, targets) {
+    try {
+      const steps = await this.snapshotSteps(job, gh, owner, targets);
+      const parts = [];
+      let size = 0;
+      let truncated = false;
+      for (const t of targets) {
+        for (const j of t.jobIds || []) {
+          if (size >= LOG_CAP) { truncated = true; break; }
+          let text = '';
+          try { text = await gh.jobLogs(owner, job.repo, j.id); } catch { continue; }
+          if (!text) continue;
+          const head = `=== ${t.name}${j.name ? ` / ${j.name}` : ''} ===\n`;
+          if (size + head.length + text.length > LOG_CAP) { text = text.slice(0, Math.max(0, LOG_CAP - size - head.length)); truncated = true; }
+          parts.push(head, text.endsWith('\n') ? text : `${text}\n`);
+          size += head.length + text.length;
+        }
+      }
+      let log = null;
+      if (parts.length) {
+        const dir = join(this.dataDir, job.id);
+        await mkdir(dir, { recursive: true });
+        await writeFile(join(dir, 'run.log'), parts.join(''));
+        log = { size, truncated };
+      }
+      this.update(job, { steps, log });
+    } catch { /* logs are a convenience */ }
+  }
+
+  logPath(id) {
+    const j = this.jobs.get(id);
+    return j?.log ? join(this.dataDir, id, 'run.log') : null;
   }
 
   async finish(job, { gh, revocable, owner, failed, mayHaveRepo }) {
@@ -572,7 +631,7 @@ export class JobManager extends EventEmitter {
     const j = this.jobs.get(id);
     if (!j) return;
     await rm(join(this.dataDir, id), { recursive: true, force: true });
-    this.update(j, { status: 'expired' });
+    this.update(j, { status: 'expired', log: null });
   }
 
   async remove(id) {

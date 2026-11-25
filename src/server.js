@@ -222,6 +222,13 @@ export function createApp(opts = {}) {
       await extensions.scan();
       return json(res, 200, { ...extensions.list(), userDir: join(dataDir, 'extensions') });
     }
+    const lg = pathname.match(/^\/api\/builds\/([\w-]+)\/log$/);
+    if (lg && req.method === 'GET') {
+      const path = jobs.logPath(lg[1]);
+      if (!path) return json(res, 404, { error: 'No log was saved for this build.' });
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+      return createReadStream(path).on('error', () => res.end()).pipe(res);
+    }
     const x = pathname.match(/^\/api\/extensions\/([a-z0-9-]{2,40})(\/run)?$/);
     if (x && req.method === 'POST') {
       await extensionsReady;
