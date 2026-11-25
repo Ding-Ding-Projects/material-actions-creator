@@ -136,6 +136,17 @@ try {
       $('[data-ext="hello-shell"] [data-ext-run]').requestSubmit(); await wait(1500);
       return $('[data-ext="hello-shell"] .ext-summary')?.textContent || ''`, (v) => /Extension id: hello-shell/.test(v));
   }
+  await check('Workspace: dock panels, timing chart and saved layout', `
+    const runs = await import('/js/views/runs.js'); const now = Date.now();
+    runs.upsert({ id: 'check1', title: 'owner/repo', platform: 'ubuntu-latest', mode: 'private', status: 'running', createdAt: now - 60000, updatedAt: now, stages: [], outputs: [], steps: [
+      { name: 'Set up job', status: 'completed', conclusion: 'success', startedAt: now - 50000, completedAt: now - 47000 },
+      { name: 'Run build.sh', status: 'in_progress', conclusion: null, startedAt: now - 47000, completedAt: null }] });
+    $('#tab-workspace').click(); await wait(2500);
+    const panels = document.querySelectorAll('.ws-panel').length; const bars = document.querySelectorAll('.ws-bar-row').length;
+    const saved = !!JSON.parse(localStorage.getItem('mac.workspace.v1') || 'null')?.panels;
+    runs.removeBuild('check1');
+    return [panels, bars, saved].join()`, (v) => v === '5,2,true');
+  await shot('05-workspace');
   await check('Workflow check runs through an extension', `
     const { lintWorkflow } = await import('/js/views/extensions.js');
     const r = await lintWorkflow('jobs:\\n  a:\\n    steps:\\n      - uses: actions/checkout@v4\\n');

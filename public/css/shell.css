@@ -331,3 +331,65 @@ pre.ext-summary { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; fon
 .wf-lint:not(:empty) { padding: 12px 16px 16px; border-top: 1px solid var(--line); display: grid; gap: 10px; animation: pop .3s var(--spring); }
 .ext-lint .eyebrow { margin: 0 0 6px; }
 @keyframes pulse-ring { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 45%, transparent); } }
+
+/* Workspace (dockview) */
+.view[data-view="workspace"] { padding: 12px clamp(12px, 2vw, 24px) 16px; display: flex; flex-direction: column; height: calc(100vh - 150px); min-height: 520px; }
+.view[data-view="workspace"][hidden] { display: none; }
+.ws-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 4px 10px; }
+.ws-top p { margin: 0; }
+.ws-reopen { display: flex; flex-wrap: wrap; gap: 6px; }
+.ws-dock { flex: 1; min-height: 0; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; animation: view-in .5s var(--ease) both; }
+.ws-dock .dockview-theme-abyss, .ws-dock .dockview-theme-light, .ws-dock [class*="dockview-theme"] {
+  --dv-group-view-background-color: var(--ink-1); --dv-tabs-and-actions-container-background-color: var(--ink-0);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--ink-1); --dv-activegroup-hiddenpanel-tab-background-color: var(--ink-0);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--ink-1); --dv-inactivegroup-hiddenpanel-tab-background-color: var(--ink-0);
+  --dv-activegroup-visiblepanel-tab-color: var(--text); --dv-activegroup-hiddenpanel-tab-color: var(--muted);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--text); --dv-inactivegroup-hiddenpanel-tab-color: var(--muted);
+  --dv-separator-border: var(--line); --dv-paneview-header-border-color: var(--line); --dv-tab-divider-color: var(--line);
+  --dv-drag-over-background-color: color-mix(in srgb, var(--accent) 22%, transparent); --dv-drag-over-border-color: var(--accent);
+  --dv-tabs-and-actions-container-height: 40px; --dv-tabs-and-actions-container-font-size: 13px; --dv-active-sash-color: var(--accent);
+  --dv-floating-box-shadow: 0 24px 60px -12px rgba(0,0,0,.6);
+  font-family: inherit;
+}
+.ws-dock .dv-tab { font-weight: 600; padding: 0 12px; }
+.ws-dock .dv-active-group .dv-tab.dv-active-tab { box-shadow: inset 0 -3px 0 var(--accent); }
+.ws-panel { height: 100%; overflow: auto; padding: 12px; box-sizing: border-box; color: var(--text); }
+.ws-panel .empty { margin: 24px 8px; color: var(--muted); }
+.ws-runs { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.ws-run { width: 100%; text-align: left; display: grid; gap: 4px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--ink-0); transition: border-color .2s, transform .3s var(--spring); }
+.ws-run:hover { transform: translateX(3px); }
+.ws-run.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--ink-0)); }
+.ws-run-title { display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
+.ws-panel .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--line); display: inline-block; }
+.ws-panel .dot.running, .ws-steps .in_progress .dot, .ws-stage.active .dot { background: var(--violet); animation: pulse 1.2s ease-in-out infinite; }
+.ws-panel .dot.ready, .ws-steps .success .dot, .ws-stage.done .dot { background: var(--mint); }
+.ws-panel .dot.failed, .ws-steps .failure .dot, .ws-stage.failed .dot { background: var(--coral); }
+.ws-log { display: flex; flex-direction: column; gap: 6px; }
+.ws-log-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: start; }
+.ws-log-search { flex: 1 1 240px; }
+.ws-check { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 13px; }
+.ws-check input { min-height: 0; }
+.ws-log-info { margin: 0; }
+.ws-log-body { flex: 1; min-height: 80px; overflow: auto; border-radius: 12px; background: var(--ink-0); border: 1px solid var(--line); padding: 10px 12px; }
+.ws-log-pre { margin: 0; font: 500 12.5px/1.65 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ws-log-pre .sec { color: var(--accent); font-weight: 700; }
+.ws-log-pre .grp { color: var(--violet); font-weight: 600; }
+.ws-log-pre .err { color: var(--coral); }
+.ws-log-pre .warn { color: var(--amber); }
+.ws-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ws-steps li { display: grid; grid-template-columns: 14px 1fr auto; gap: 10px; align-items: center; padding: 6px 4px; }
+.ws-stage { display: flex; align-items: center; gap: 10px; margin: 0; padding: 6px 4px; }
+.ws-timing-total { font: 600 13px var(--mono); margin: 0 0 12px; }
+.ws-chart { display: grid; gap: 7px; }
+.ws-bar-row { display: grid; grid-template-columns: minmax(90px, 180px) 1fr 56px; gap: 10px; align-items: center; font-size: 13px; animation: rise .4s var(--ease) both; animation-delay: calc(min(var(--i), 20) * 30ms); }
+.ws-bar-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ws-bar-track { position: relative; height: 16px; border-radius: 8px; background: var(--ink-0); }
+.ws-bar { position: absolute; top: 0; bottom: 0; border-radius: 8px; background: var(--mint); transform-origin: left; animation: grow .8s var(--ease) both; }
+.ws-bar.failure { background: var(--coral); } .ws-bar.skipped, .ws-bar.cancelled { background: var(--line); }
+.ws-bar.in_progress { background: repeating-linear-gradient(-45deg, var(--violet) 0 8px, color-mix(in srgb, var(--violet) 60%, transparent) 8px 16px); background-size: 200% 100%; animation: stripes 1.2s linear infinite; }
+.ws-bar-time { font: 500 11px var(--mono); color: var(--muted); text-align: right; }
+.ws-outs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ws-outs li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 12px; border-radius: 14px; background: var(--ink-0); border: 1px solid var(--line); }
+.ws-outs li div { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.ws-ext-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+@keyframes stripes { to { background-position: -32px 0; } }

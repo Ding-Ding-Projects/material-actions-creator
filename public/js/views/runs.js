@@ -59,6 +59,7 @@ function card(job) {
       </div>` : ''}
     <div class="run-actions">
       ${job.runUrl && job.status === 'running' ? `<a class="btn" href="${esc(job.runUrl)}" target="_blank" rel="noopener">${h('runs.watch')} ↗</a>` : ''}
+      <button class="btn quiet" type="button" data-open-ws="${job.id}">▦ ${h('runs.openWorkspace')}</button>
       ${job.status !== 'running' ? `<button class="btn quiet" type="button" data-remove="${job.id}">${h('runs.dismiss')}</button>` : ''}
     </div>`;
 }
@@ -143,6 +144,8 @@ function mount(el) {
     counts();
   });
   el.addEventListener('click', async (e) => {
+    const ws = e.target.closest('[data-open-ws]');
+    if (ws) { (await import('./workspace.js')).openRun(ws.dataset.openWs); return; }
     const rm = e.target.closest('[data-remove]');
     if (rm) {
       try { await api(`/api/builds/${rm.dataset.remove}`, { method: 'DELETE' }); removeBuild(rm.dataset.remove); } catch (err) { notify(err.message, { kind: 'error' }); }
