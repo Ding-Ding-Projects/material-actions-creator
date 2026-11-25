@@ -428,6 +428,7 @@ export class ExtensionHost extends EventEmitter {
       child.on('close', (code) => {
         const line = Buffer.concat(chunks).toString('utf8').trim().split('\n').filter(Boolean).pop() || '';
         let reply;
+        if (/^bwrap: execvp .*No such file or directory/m.test(err)) { finish({ ok: false, error: `Program not found: ${manifest.run.command}` }); return; }
         try { reply = JSON.parse(line); } catch { finish({ ok: false, error: code ? `Exited with code ${code}. ${err.trim().slice(0, 500)}`.trim() : 'The reply was not one line of JSON.' }); return; }
         if (!reply || typeof reply !== 'object' || reply.ok !== true) { finish({ ok: false, error: String(reply?.error || `Exited with code ${code}.`).slice(0, 1000) }); return; }
         finish({ ok: true, result: cleanResult(reply.result) });
