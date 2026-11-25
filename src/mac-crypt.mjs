@@ -29,8 +29,11 @@ const ENC_MAGIC = Buffer.from('MACENC1\n');
 const PKG_MAGIC = Buffer.from('MACPKG1\n');
 const CHUNK = 1024 * 1024;
 
+// URL-safe base64: a standard base64 key can start with "/", and Git Bash on
+// Windows rewrites environment values that look like paths before node sees
+// them, which corrupted the key in about one run in 64. parseKey accepts both.
 export function keygen() {
-  return randomBytes(32).toString('base64');
+  return randomBytes(32).toString('base64url');
 }
 
 export function parseKey(key) {

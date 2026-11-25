@@ -52,6 +52,10 @@
         {
           "type": "added",
           "text": "Front-screen version and updated-at, read from the build or the git checkout."
+        },
+        {
+          "type": "fixed",
+          "text": "Run keys use the URL-safe base64 alphabet, so Git Bash on Windows runners can no longer rewrite a key that starts with a slash."
         }
       ]
     },

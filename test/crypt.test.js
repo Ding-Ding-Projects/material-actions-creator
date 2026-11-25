@@ -159,3 +159,13 @@ test('findFiles skips .git', async () => {
   await writeFile(join(d, 'y.exe'), '');
   assert.deepEqual(await findFiles(d, ['**/*.exe']), ['y.exe']);
 });
+
+test('keygen keys never look like a path and still parse in both alphabets', async () => {
+  const { keygen, parseKey } = await import('../src/mac-crypt.mjs');
+  for (let i = 0; i < 2000; i++) {
+    const k = keygen();
+    assert.ok(!/[/+=]/.test(k), `key uses the URL-safe alphabet: ${k.length}`);
+    assert.equal(parseKey(k).length, 32);
+    assert.equal(parseKey(Buffer.from(parseKey(k)).toString('base64')).length, 32);
+  }
+});
