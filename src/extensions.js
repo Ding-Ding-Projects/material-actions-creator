@@ -100,8 +100,8 @@ export function bwrapArgs({ dir, home, hide = [], tools = [], outputs = [], netw
   if (network) out.push('--share-net');
   out.push('--ro-bind', '/', '/', '--dev', '/dev', '--proc', '/proc', '--tmpfs', '/tmp');
   for (const h of hidden) out.push('--tmpfs', h);
-  // Programs installed under a hidden folder (for example a per-user Node.js)
-  // are put back read-only; anything hidden inside them is hidden again.
+  // Programs installed under a hidden folder or under /tmp (a per-user Node.js,
+  // an unpacked AppImage) are put back read-only; anything hidden inside them is hidden again.
   for (const t of tools) {
     out.push('--ro-bind', t, t);
     for (const h of hidden) if (under(h, t)) out.push('--tmpfs', h);
@@ -403,7 +403,7 @@ export class ExtensionHost extends EventEmitter {
     if (iso.mode === 'bwrap') {
       // Only folders that exist can be hidden or put back.
       const hide = [homedir(), this.env.HOME, this.dataDir, ...this.hide].filter((h) => h && existsSync(h));
-      argv = bwrapArgs({ dir, home, hide, tools: toolDirs(env.PATH.split(':').filter(Boolean), hide), outputs: outputs.filter((o) => existsSync(o)), network, command, args: manifest.run.args });
+      argv = bwrapArgs({ dir, home, hide, tools: toolDirs(env.PATH.split(':').filter(Boolean), [...hide, '/tmp']), outputs: outputs.filter((o) => existsSync(o)), network, command, args: manifest.run.args });
       command = 'bwrap';
     } else if (iso.required) {
       return { ok: false, error: 'Extensions are set to run only in a sandbox, and no sandbox is available on this computer.', bytes: 0 };
