@@ -393,3 +393,18 @@ pre.ext-summary { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; fon
 .ws-outs li div { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
 .ws-ext-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 @keyframes stripes { to { background-position: -32px 0; } }
+
+.ext-iso { margin: 14px 0; border-left: 4px solid var(--amber); }
+.ext-iso.bwrap { border-left-color: var(--mint); }
+.ext-iso p { margin: 0 0 4px; }
+.ext-iso-title { font: 800 22px var(--display); }
+.ext-gallery { margin: 28px 0; }
+.ext-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px; margin: 12px 0; }
+.ext-sample { display: grid; gap: 10px; align-content: start; padding: 16px; border-radius: var(--r-lg); background: var(--ink-1); border: 1px solid var(--line); animation: rise .45s var(--ease) both; animation-delay: calc(var(--i) * 60ms); transition: transform .35s var(--spring), border-color .2s; }
+.ext-sample:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.ext-sample p { margin: 0; }
+.ext-sample-head { display: flex; gap: 12px; align-items: center; }
+.ext-drop { display: grid; gap: 6px; justify-items: center; text-align: center; padding: 22px; border: 2px dashed var(--line); border-radius: var(--r-lg); cursor: pointer; transition: border-color .2s, background .2s, transform .3s var(--spring); }
+.ext-drop:hover, .ext-drop.over, .ext-drop:focus-within { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.ext-drop.over { transform: scale(1.01); }
+.text-btn.danger { color: var(--coral); }

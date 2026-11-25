@@ -148,6 +148,8 @@ test('extensions API: list, lint a workflow, consent gate, and the finished-buil
   assert.deepEqual(list.extensions.map((e) => e.id).sort(), ['build-summary', 'checksums', 'workflow-lint']);
   assert.ok(list.extensions.every((e) => e.enabled && e.source === 'builtin'));
   assert.equal(list.protocol, 1);
+  assert.ok(['bwrap', 'none'].includes(list.isolation.mode));
+  assert.ok(list.gallery.some((g) => g.id === 'hello-shell'));
 
   const lint = await (await call('/api/extensions/workflow-lint/run', { method: 'POST', body: { hook: 'workflow.lint', yaml: 'jobs:\n  a:\n    steps:\n      - uses: actions/checkout@v4\n' } })).json();
   assert.equal(lint.ok, true);

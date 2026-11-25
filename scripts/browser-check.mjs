@@ -130,6 +130,11 @@ try {
     $('[data-ext="hello-shell"] [data-ext-toggle]').click(); await wait(400);
     $('dialog.ext-consent [data-allow]').click(); await wait(900);
     return stillOff && $('[data-ext="hello-shell"]').classList.contains('on')`);
+  await check('Extensions: gallery adds a sample, and it starts off', `
+    const b = $('[data-sample="size-budget"] [data-ext-add]'); if (!b) return 'no gallery';
+    b.click(); await wait(1200);
+    const card = $('[data-ext="size-budget"]');
+    return !!card && !card.classList.contains('on') && $('[data-sample="size-budget"] [data-ext-add]').disabled && !!$('.ext-iso-title')`);
   await shot('03-extensions');
   if (process.platform !== 'win32') {
     await check('Extensions: the sh sample runs and shows its reply', `

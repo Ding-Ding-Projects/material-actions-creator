@@ -1,0 +1,10 @@
+{
+  "manifestVersion": 1,
+  "id": "release-notes",
+  "name": "Release notes draft",
+  "version": "0.1.0",
+  "description": "Sample: drafts release notes for a finished build, listing each output with its size.",
+  "run": { "command": "node", "args": ["main.mjs"] },
+  "hooks": ["build.finished"],
+  "permissions": ["build:read", "outputs:read"]
+}

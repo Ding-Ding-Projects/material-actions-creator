@@ -4,6 +4,7 @@ import { open } from 'node:fs/promises';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { createInflateRaw } from 'node:zlib';
 import { pipeline } from 'node:stream/promises';
+import { Transform } from 'node:stream';
 
 const EOCD_SIG = 0x06054b50;
 const EOCD64_LOC_SIG = 0x07064b50;
@@ -73,7 +74,7 @@ export async function listEntries(zipPath) {
   }
 }
 
-export async function extractEntry(zipPath, entryName, destPath) {
+export async function extractEntry(zipPath, entryName, destPath, { maxBytes = Infinity } = {}) {
   const entries = await listEntries(zipPath);
   const entry = entries.find((e) => e.name === entryName) || entries.find((e) => !e.name.endsWith('/'));
   if (!entry) throw new Error(`Zip has no entry ${entryName}.`);
@@ -93,7 +94,11 @@ export async function extractEntry(zipPath, entryName, destPath) {
     return { name: entry.name, size: 0 };
   }
   const src = createReadStream(zipPath, { start: dataStart, end: dataStart + entry.compressedSize - 1 });
-  if (entry.method === 8) await pipeline(src, createInflateRaw(), out);
-  else await pipeline(src, out);
+  // Counts what is actually written, so a file that unpacks to more than its
+  // header claims cannot fill the disk.
+  let written = 0;
+  const cap = new Transform({ transform(chunk, _enc, cb) { written += chunk.length; cb(written > maxBytes ? new Error('The file unpacks to more than the allowed size.') : null, chunk); } });
+  if (entry.method === 8) await pipeline(src, createInflateRaw(), cap, out);
+  else await pipeline(src, cap, out);
   return { name: entry.name, size: entry.uncompressedSize };
 }

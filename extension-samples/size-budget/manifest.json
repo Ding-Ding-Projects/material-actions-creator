@@ -1,0 +1,10 @@
+{
+  "manifestVersion": 1,
+  "id": "size-budget",
+  "name": "Size budget",
+  "version": "0.1.0",
+  "description": "Sample: warns when an output is larger than a budget. Edit BUDGET_MB in main.mjs.",
+  "run": { "command": "node", "args": ["main.mjs"] },
+  "hooks": ["build.finished"],
+  "permissions": ["outputs:read"]
+}

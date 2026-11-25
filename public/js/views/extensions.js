@@ -4,7 +4,8 @@
 import * as registry from '../core/registry.js';
 import { STRINGS } from '../core/strings.js';
 import { t, h, v, esc } from '../core/i18n.js';
-import { api, on } from '../core/api.js';
+import { api, on, getKey } from '../core/api.js';
+import { superConfirm } from '../ui/confirm.js';
 import { notify, play } from '../core/feedback.js';
 import { searchField } from '../ui/regex-builder.js';
 import { render as md } from '../ui/markdown.js';
@@ -54,6 +55,27 @@ Object.assign(STRINGS, {
   'ext.perm.outputs:read.why': { en: 'Names, sizes and where the decrypted outputs are on this computer.', yue: '已解密輸出檔案嘅名、大細同喺部電腦嘅位置。' },
   'ext.perm.workflow:read': { en: 'Workflow text', yue: '工作流程內容' },
   'ext.perm.workflow:read.why': { en: 'The generated workflow YAML you are previewing.', yue: '你預覽緊嘅工作流程 YAML。' },
+  'ext.perm.network': { en: 'Network access', yue: '網絡存取' },
+  'ext.perm.network.why': { en: 'May reach the network. Only enforced when extensions run sandboxed; without a sandbox every extension can reach it.', yue: '可以上網。只有喺沙盒入面行先會強制執行；冇沙盒嘅話所有擴充功能都上到網。' },
+  'ext.gallery': { en: 'Gallery', yue: '展覽館' },
+  'ext.gallery.lede': { en: 'Samples that ship with the app. Added extensions start switched off.', yue: '個 app 附帶嘅範例。新加嘅擴充功能預設係閂咗。' },
+  'ext.add': { en: 'Add', yue: '加入' },
+  'ext.added': { en: 'Added', yue: '已加入' },
+  'ext.addedNote': { en: '{name} was added. Switch it on when you are ready.', yue: '已加入 {name}，準備好就開啟佢。' },
+  'ext.upload': { en: 'Choose an extension .zip', yue: '揀一個擴充功能 .zip' },
+  'ext.drop': { en: 'Drop an extension .zip here, or choose a file. It is unpacked, checked and added switched off. 2 MB at most.', yue: '將擴充功能 .zip 拖嚟呢度，或者揀檔案。會解壓、檢查，再以閂咗嘅狀態加入。最大 2 MB。' },
+  'ext.remove': { en: 'Remove', yue: '移除' },
+  'ext.removed': { en: 'Extension removed.', yue: '已移除擴充功能。' },
+  'confirm.extRemove': { en: 'Remove the extension “{name}” and its files from this computer?', yue: '由呢部電腦移除擴充功能「{name}」同佢嘅檔案？' },
+  'ext.iso.title': { en: 'Isolation on this computer', yue: '呢部電腦嘅隔離狀態' },
+  'ext.iso.bwrap': { en: 'Sandboxed (bubblewrap)', yue: '已用沙盒（bubblewrap）' },
+  'ext.iso.bwrap.body': { en: 'Extensions see a read-only system, their own folder and the output files you allowed. No home folder, no app data, no sign-in files, and no network unless you allow it.', yue: '擴充功能只會見到唯讀系統、自己個資料夾同你批准嘅輸出檔案。冇主目錄、冇 app 資料、冇登入檔案，除非你批准否則冇網絡。' },
+  'ext.iso.none': { en: 'Not sandboxed', yue: '未用沙盒' },
+  'ext.iso.none.off': { en: 'Sandboxing is switched off by the MAC_EXTENSION_ISOLATION setting. Extensions run as ordinary programs.', yue: 'MAC_EXTENSION_ISOLATION 設定閂咗沙盒，擴充功能會當普通程式行。' },
+  'ext.iso.none.not-linux': { en: 'The sandbox needs Linux with bubblewrap. Here extensions run as ordinary programs, so only add ones you trust.', yue: '沙盒需要 Linux 加 bubblewrap。喺呢度擴充功能會當普通程式行，只好加你信得過嘅。' },
+  'ext.iso.none.not-installed': { en: 'bubblewrap is not installed, so extensions run as ordinary programs. Install the bubblewrap package to sandbox them.', yue: '未安裝 bubblewrap，擴充功能會當普通程式行。安裝 bubblewrap 套件就可以用沙盒。' },
+  'ext.iso.none.not-permitted': { en: 'bubblewrap is installed but this system does not let it start (often inside containers). Extensions run as ordinary programs.', yue: '已安裝 bubblewrap，但系統唔畀佢啟動（喺容器入面好常見）。擴充功能會當普通程式行。' },
+  'ext.sandboxed': { en: 'sandboxed', yue: '沙盒' },
   'ext.hook.build.finished': { en: 'When a build finishes', yue: '建置完成時' },
   'ext.hook.workflow.lint': { en: 'Workflow check', yue: '工作流程檢查' },
   'ext.hook.command': { en: 'On demand', yue: '手動執行' },
@@ -89,7 +111,7 @@ function lastRunHtml(e) {
   const r = e.lastRun;
   if (!r) return `<p class="muted small">${h('ext.never')}</p>`;
   const hook = t(`ext.hook.${r.hook}`);
-  return `<div class="ext-last ${r.ok ? 'ok' : 'bad'}"><p class="ext-stats"><span class="dot"></span>${esc(t('ext.stats', { hook, ms: r.ms, bytes: r.bytes ?? 0 }))} · <time>${esc(new Date(r.at).toLocaleString())}</time></p>${r.ok ? resultHtml(r.result) : `<p class="run-error">${esc(v(r.error || ''))}</p>`}</div>`;
+  return `<div class="ext-last ${r.ok ? 'ok' : 'bad'}"><p class="ext-stats"><span class="dot"></span>${esc(t('ext.stats', { hook, ms: r.ms, bytes: r.bytes ?? 0 }))} · <time>${esc(new Date(r.at).toLocaleString())}</time>${r.sandboxed ? ` · <span class="ext-chip">${h('ext.sandboxed')}</span>` : ''}</p>${r.ok ? resultHtml(r.result) : `<p class="run-error">${esc(v(r.error || ''))}</p>`}</div>`;
 }
 
 function card(e, i) {
@@ -105,6 +127,7 @@ function card(e, i) {
       <p class="muted small">${esc(t('ext.limits', { s: e.limits.timeoutMs / 1000, kb: Math.round(e.limits.maxOutputBytes / 1024) }))}</p>
       ${e.needsConsent ? `<p class="hint">${h('ext.needsConsent')} <button type="button" class="btn" data-ext-review>${h('ext.review')}</button></p>` : ''}
       ${canRun ? `<form class="ext-run" data-ext-run>${e.command?.inputLabel ? `<label class="field grow"><span>${esc(v(e.command.inputLabel))}</span><textarea rows="2" name="input"></textarea></label>` : ''}<button type="submit" class="btn" ${busy.has(e.id) ? 'disabled' : ''}>${busy.has(e.id) ? h('ext.running') : esc(v(e.command?.title || t('ext.run')))}</button></form>` : ''}
+      ${e.source === 'user' ? `<p><button type="button" class="text-btn danger" data-ext-remove>${h('ext.remove')}</button></p>` : ''}
       <details class="ext-details" ${e.lastRun ? 'open' : ''}><summary>${h('ext.lastRun')}</summary>${lastRunHtml(e)}</details>
     </div>
     <label class="switch" title="${esc(t('ext.enable', { name: e.name }))}"><input type="checkbox" role="switch" data-ext-toggle ${e.wantsEnabled && !e.needsConsent ? 'checked' : ''} aria-label="${esc(t('ext.enable', { name: e.name }))}"><span class="switch-track"></span></label>
@@ -183,6 +206,9 @@ function mount(el) {
     <div class="info-filters"><div class="info-search"></div></div>
     <ul class="ext-list" aria-live="polite"></ul>
     <section class="ext-broken" hidden></section>
+    <section class="ext-iso panel" aria-live="polite"></section>
+    <section class="ext-gallery"><p class="eyebrow">${h('ext.gallery')}</p><p class="muted small">${h('ext.gallery.lede')}</p><div class="ext-gallery-grid"></div>
+      <label class="ext-drop" data-own-drop><input type="file" accept=".zip,application/zip" hidden data-ext-zip><strong>${h('ext.upload')}</strong><span class="muted small">${h('ext.drop')}</span></label></section>
     <section class="ext-folder panel"><p class="step">${h('ext.folder')}</p><p><code data-ext-dir></code></p><p class="muted small">${h('ext.folderWhy')}</p><p class="muted small">${h('ext.notSandbox')}</p><button type="button" class="btn" data-ext-rescan>${h('ext.rescan')}</button></section>`;
   let matcher = () => true;
   const list = el.querySelector('.ext-list');
@@ -193,7 +219,28 @@ function mount(el) {
     broken.hidden = !data.broken?.length;
     broken.innerHTML = data.broken?.length ? `<p class="eyebrow">${h('ext.broken')}</p><ul>${data.broken.map((b) => `<li><code>${esc(b.folder)}</code> — ${esc(b.error)}</li>`).join('')}</ul>` : '';
     el.querySelector('[data-ext-dir]').textContent = data.userDir || '';
+    const iso = data.isolation || { mode: 'none', reason: 'not-installed' };
+    const isoEl = el.querySelector('.ext-iso');
+    isoEl.className = `ext-iso panel ${iso.mode}`;
+    isoEl.innerHTML = `<p class="step">${h('ext.iso.title')}</p><p class="ext-iso-title">${h(iso.mode === 'bwrap' ? 'ext.iso.bwrap' : 'ext.iso.none')}</p><p class="muted">${h(iso.mode === 'bwrap' ? 'ext.iso.bwrap.body' : `ext.iso.none.${iso.reason}`)}</p>`;
+    el.querySelector('.ext-gallery-grid').innerHTML = (data.gallery || []).map((g, i) => `<article class="ext-sample" style="--i:${i}" data-sample="${esc(g.id)}"><div class="ext-sample-head"><span class="ext-icon" aria-hidden="true">${esc(g.name[0].toUpperCase())}</span><div><strong>${esc(v(g.name))}</strong><p class="muted small">${esc(g.program)} · v${esc(g.version)}</p></div></div><p class="muted small">${esc(v(g.description))}</p><button type="button" class="${g.installed ? 'btn' : 'fab small'}" data-ext-add ${g.installed ? 'disabled' : ''}>${h(g.installed ? 'ext.added' : 'ext.add')}</button></article>`).join('');
   };
+  async function uploadZip(file) {
+    if (!file) return;
+    try {
+      const res = await fetch('/api/extensions/upload', { method: 'POST', headers: { 'Content-Type': 'application/zip', ...(getKey() ? { 'x-access-key': getKey() } : {}) }, body: file });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || `HTTP ${res.status}`);
+      notify(t('ext.addedNote', { name: out.name }), { kind: 'success' });
+      await refresh();
+      registry.teleport({ tab: 'extensions', target: `[data-ext="${out.id}"]` });
+    } catch (err) { notify(err.message, { kind: 'error' }); }
+  }
+  const drop = el.querySelector('.ext-drop');
+  drop.addEventListener('dragover', (ev) => { ev.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', (ev) => { ev.preventDefault(); ev.stopPropagation(); drop.classList.remove('over'); uploadZip(ev.dataTransfer.files[0]); });
+  el.querySelector('[data-ext-zip]').addEventListener('change', (ev) => { uploadZip(ev.target.files[0]); ev.target.value = ''; });
   el.querySelector('.info-search').append(searchField({ placeholderKey: 'ext.search', ui: 'ext-search', onChange: (m) => { matcher = m; redraw(); } }));
   const find = (node) => data.extensions.find((e) => e.id === node.closest('[data-ext]')?.dataset.ext);
   el.addEventListener('change', async (ev) => {
@@ -206,6 +253,17 @@ function mount(el) {
   });
   el.addEventListener('click', async (ev) => {
     if (ev.target.closest('[data-ext-review]')) { try { await turnOn(find(ev.target)); } catch (err) { notify(err.message, { kind: 'error' }); } refresh(); return; }
+    const add = ev.target.closest('[data-ext-add]');
+    if (add) {
+      try { const out = await POST('/api/extensions/install', { sample: add.closest('[data-sample]').dataset.sample }); notify(t('ext.addedNote', { name: out.name }), { kind: 'success' }); play('confirm'); } catch (err) { notify(err.message, { kind: 'error' }); }
+      refresh(); return;
+    }
+    if (ev.target.closest('[data-ext-remove]')) {
+      const e = find(ev.target);
+      if (!(await superConfirm({ messageKey: 'confirm.extRemove', vars: { name: e.name } }))) return;
+      try { data = await api(`/api/extensions/${e.id}`, { method: 'DELETE' }); notify(t('ext.removed'), { kind: 'success' }); } catch (err) { notify(err.message, { kind: 'error' }); }
+      redraw(); return;
+    }
     if (ev.target.closest('[data-ext-rescan]')) {
       try { data = await POST('/api/extensions/rescan'); notify(t('ext.rescanned', { n: data.extensions.length }), { kind: 'success' }); } catch (err) { notify(err.message, { kind: 'error' }); }
       registerCommands(); redraw();

@@ -69,6 +69,12 @@ jobs:
         run: |
           scripts/run-linux.sh --install-desktop
           test -f "${XDG_DATA_HOME:-$HOME/.local/share}/applications/material-actions-creator.desktop"
+      - name: Extensions really run sandboxed (bubblewrap)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq bubblewrap
+          # Ubuntu 24.04 blocks unprivileged user namespaces by default.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          MAC_REQUIRE_SANDBOX_TEST=1 node --test test/extensions.test.js
       - name: Browser check in headless Chrome
         run: node scripts/browser-check.mjs --shots shots
       - uses: actions/upload-artifact@v4

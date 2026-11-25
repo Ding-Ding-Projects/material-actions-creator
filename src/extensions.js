@@ -9,10 +9,12 @@
 // extension's own data folder), and only puts data in the payload that the
 // user has approved for that extension. This is not an operating-system
 // sandbox: an extension is still a program running as the same user.
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { readFile, readdir, writeFile, mkdir, rename } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { readFile, readdir, writeFile, mkdir, rename, rm, cp, mkdtemp, stat, lstat } from 'node:fs/promises';
+import { join, dirname, basename, resolve, sep } from 'node:path';
+import { homedir, tmpdir } from 'node:os';
+import { listEntries, extractEntry } from './zip.js';
 
 export const PROTOCOL = 1;
 export const MANIFEST_VERSION = 1;
@@ -21,7 +23,9 @@ export const PERMISSIONS = {
   'build:read': 'Build details: title, mode, status, timing and stage names.',
   'outputs:read': 'Output files: names, sizes and where the decrypted files are on this computer.',
   'workflow:read': 'Workflow text: the generated workflow YAML being previewed.',
+  network: 'Network access. Only enforced when extensions run sandboxed; without a sandbox every extension can reach the network.',
 };
+const UPLOAD = { maxFiles: 200, maxBytes: 5 * 1024 * 1024 };
 export const LIMITS = { timeoutMs: { default: 10_000, max: 60_000 }, maxOutputBytes: { default: 256 * 1024, max: 1024 * 1024 } };
 const ID = /^[a-z0-9][a-z0-9-]{1,39}$/;
 const SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
@@ -84,10 +88,34 @@ export function cleanResult(r) {
   return out;
 }
 
+const under = (child, parent) => { const c = resolve(child); const p = resolve(parent); return c === p || c.startsWith(p.endsWith(sep) ? p : p + sep); };
+
+// Arguments for bubblewrap: a read-only system, no home folder, no app data,
+// no network unless allowed, and only the extension's own folders plus the
+// output files it was granted. Pure, so it can be tested without bubblewrap.
+export function bwrapArgs({ dir, home, hide = [], outputs = [], network = false, pathDirs = [], command, args = [] }) {
+  const hidden = [...new Set(hide.filter((h) => h && resolve(h) !== '/').map((h) => resolve(h)))];
+  const out = ['--die-with-parent', '--new-session', '--unshare-all'];
+  if (network) out.push('--share-net');
+  out.push('--ro-bind', '/', '/', '--dev', '/dev', '--proc', '/proc', '--tmpfs', '/tmp');
+  for (const h of hidden) out.push('--tmpfs', h);
+  // Programs installed under a hidden folder (for example a per-user Node.js) are put back read-only.
+  const tools = new Set();
+  for (const d of pathDirs) if (hidden.some((h) => under(d, h) && resolve(d) !== h)) tools.add(basename(d) === 'bin' ? dirname(resolve(d)) : resolve(d));
+  for (const t of tools) out.push('--ro-bind', t, t);
+  out.push('--ro-bind', dir, dir, '--bind', home, home);
+  for (const o of outputs) out.push('--ro-bind', o, o);
+  out.push('--chdir', dir, '--', command, ...args);
+  return out;
+}
+
 export class ExtensionHost extends EventEmitter {
   // dirs: [{ path, source: 'builtin' | 'user' }]
-  constructor({ dirs = [], dataDir, env = process.env } = {}) {
+  constructor({ dirs = [], dataDir, env = process.env, samplesDir = null, hide = [] } = {}) {
     super();
+    this.samplesDir = samplesDir;
+    this.hide = hide;
+    this.isolation = null;
     this.dirs = dirs;
     this.dataDir = dataDir;
     this.stateFile = dataDir ? join(dataDir, 'extensions.json') : null;
@@ -96,6 +124,99 @@ export class ExtensionHost extends EventEmitter {
     this.state = {};
     this.broken = [];
     this.running = new Map();
+  }
+
+  // Decides once whether bubblewrap can be used here. MAC_EXTENSION_ISOLATION:
+  // "off" never sandboxes, "require" refuses to run extensions without it,
+  // anything else uses it when it works.
+  detectIsolation() {
+    if (this.isolation) return this.isolation;
+    const want = String(this.env.MAC_EXTENSION_ISOLATION || 'auto').toLowerCase();
+    let mode = 'none';
+    let reason = 'off';
+    if (want !== 'off') {
+      if (process.platform !== 'linux') reason = 'not-linux';
+      else {
+        const probe = spawnSync('bwrap', ['--ro-bind', '/', '/', '--unshare-all', '--die-with-parent', 'true'], { env: { PATH: this.env.PATH || '/usr/bin:/bin' }, timeout: 5000, stdio: 'ignore' });
+        if (probe.error?.code === 'ENOENT') reason = 'not-installed';
+        else if (probe.status === 0) { mode = 'bwrap'; reason = 'ok'; } else reason = 'not-permitted';
+      }
+    }
+    this.isolation = { mode, reason, required: want === 'require' };
+    return this.isolation;
+  }
+
+  userDir() { return this.dirs.find((d) => d.source === 'user')?.path || null; }
+
+  // Bundled samples that can be added with one click.
+  async gallery() {
+    if (!this.samplesDir) return [];
+    let names = [];
+    try { names = (await readdir(this.samplesDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name).sort(); } catch { return []; }
+    const out = [];
+    for (const name of names) {
+      try {
+        const m = validateManifest(JSON.parse(await readFile(join(this.samplesDir, name, 'manifest.json'), 'utf8')), name);
+        out.push({ id: m.id, name: m.name, version: m.version, description: m.description, program: m.run.command, permissions: m.permissions, hooks: m.hooks, installed: this.exts.has(m.id) });
+      } catch { /* a broken sample is not offered */ }
+    }
+    return out;
+  }
+
+  async installSample(id) {
+    if (!ID.test(String(id))) throw Object.assign(new Error('Unknown sample.'), { status: 404 });
+    const from = join(this.samplesDir || '', id);
+    try { await stat(join(from, 'manifest.json')); } catch { throw Object.assign(new Error('Unknown sample.'), { status: 404 }); }
+    return this.installFolder(from, id);
+  }
+
+  // Unpacks an uploaded zip into a scratch folder, checks it, then installs it.
+  async installZip(zipPath) {
+    const fail = (m) => { throw Object.assign(new Error(m), { status: 400 }); };
+    let entries;
+    try { entries = (await listEntries(zipPath)).filter((e) => !e.name.endsWith('/')); } catch { fail('That file is not a zip archive.'); }
+    if (!entries.length) fail('The zip is empty.');
+    if (entries.length > UPLOAD.maxFiles) fail(`The zip has more than ${UPLOAD.maxFiles} files.`);
+    if (entries.reduce((n, e) => n + e.uncompressedSize, 0) > UPLOAD.maxBytes) fail('The zip unpacks to more than 5 MB.');
+    const top = entries.every((e) => e.name.includes('/')) && new Set(entries.map((e) => e.name.split('/')[0])).size === 1 ? `${entries[0].name.split('/')[0]}/` : '';
+    const scratch = await mkdtemp(join(tmpdir(), 'mac-ext-'));
+    try {
+      let budget = UPLOAD.maxBytes;
+      for (const e of entries) {
+        const rel = e.name.slice(top.length);
+        if (!rel || rel.startsWith('/') || rel.includes('\\') || rel.split('/').some((part) => part === '..' || part === '')) fail(`Unsafe path in the zip: ${e.name}`);
+        const dest = join(scratch, rel);
+        if (!under(dest, scratch)) fail(`Unsafe path in the zip: ${e.name}`);
+        await mkdir(dirname(dest), { recursive: true });
+        try { budget -= (await extractEntry(zipPath, e.name, dest, { maxBytes: budget })).size; } catch (err) { fail(`Could not unpack ${rel}: ${err.message}`); }
+      }
+      let manifest;
+      try { manifest = validateManifest(JSON.parse(await readFile(join(scratch, 'manifest.json'), 'utf8'))); } catch (err) { fail(err instanceof ManifestError ? err.message : 'The zip has no valid manifest.json at its top level.'); }
+      return await this.installFolder(scratch, manifest.id);
+    } finally { await rm(scratch, { recursive: true, force: true }).catch(() => {}); }
+  }
+
+  async installFolder(from, id) {
+    const userDir = this.userDir();
+    if (!userDir) throw Object.assign(new Error('This server has no folder for added extensions.'), { status: 409 });
+    if (this.exts.get(id)?.source === 'builtin') throw Object.assign(new Error(`"${id}" is a built-in extension and cannot be replaced.`), { status: 409 });
+    const dest = join(userDir, id);
+    await mkdir(userDir, { recursive: true });
+    await rm(dest, { recursive: true, force: true });
+    await cp(from, dest, { recursive: true, dereference: false, filter: async (src) => !(await lstat(src)).isSymbolicLink() });
+    await this.scan();
+    if (!this.exts.has(id)) throw Object.assign(new Error(this.broken.find((b) => b.folder === id)?.error || 'The extension could not be loaded.'), { status: 400 });
+    return this.view(id);
+  }
+
+  async uninstall(id) {
+    const e = this.exts.get(id);
+    if (!e) throw Object.assign(new Error('Extension not found.'), { status: 404 });
+    if (e.source !== 'user') throw Object.assign(new Error('Built-in extensions cannot be removed. Turn it off instead.'), { status: 409 });
+    await rm(e.dir, { recursive: true, force: true });
+    delete this.state[id];
+    await this.save();
+    await this.scan();
   }
 
   async load() {
@@ -180,7 +301,7 @@ export class ExtensionHost extends EventEmitter {
   }
 
   list() {
-    return { extensions: [...this.exts.keys()].map((id) => this.view(id)), broken: this.broken, hooks: HOOKS, permissions: PERMISSIONS, limits: LIMITS, protocol: PROTOCOL };
+    return { extensions: [...this.exts.keys()].map((id) => this.view(id)), broken: this.broken, hooks: HOOKS, permissions: PERMISSIONS, limits: LIMITS, protocol: PROTOCOL, isolation: this.detectIsolation() };
   }
 
   // grant must repeat the exact permission list the user was shown, so consent
@@ -236,9 +357,9 @@ export class ExtensionHost extends EventEmitter {
     const started = Date.now();
     let outcome;
     try {
-      outcome = await this.exec(e, { protocol: PROTOCOL, hook, extension: { id, version: e.manifest.version }, payload });
+      outcome = await this.exec(e, { protocol: PROTOCOL, hook, extension: { id, version: e.manifest.version }, payload }, { outputs: (payload.outputs || []).map((o) => o.path), network: v.granted.includes('network') });
     } finally { release(); }
-    const record = { at: started, hook, ms: Date.now() - started, bytes: outcome.bytes, ok: outcome.ok, error: outcome.error || null, result: outcome.result || null, ...(ctx.build ? { buildId: ctx.build.id } : {}) };
+    const record = { at: started, hook, ms: Date.now() - started, bytes: outcome.bytes, sandboxed: Boolean(outcome.sandboxed), ok: outcome.ok, error: outcome.error || null, result: outcome.result || null, ...(ctx.build ? { buildId: ctx.build.id } : {}) };
     this.state[id].lastRun = record;
     await this.save().catch(() => {});
     this.emit('run', { id, name: e.manifest.name, ...record });
@@ -255,21 +376,30 @@ export class ExtensionHost extends EventEmitter {
     return results;
   }
 
-  async exec(e, message) {
+  async exec(e, message, { outputs = [], network = false } = {}) {
     const { manifest, dir } = e;
     const home = this.dataDir ? join(this.dataDir, 'extension-data', manifest.id) : dir;
     await mkdir(home, { recursive: true }).catch(() => {});
     const env = { PATH: this.env.PATH || '/usr/local/bin:/usr/bin:/bin', HOME: home, LANG: this.env.LANG || 'C.UTF-8', MAC_EXTENSION_ID: manifest.id, MAC_EXTENSION_DATA: home, MAC_PROTOCOL: String(PROTOCOL) };
     if (this.env.SystemRoot) env.SystemRoot = this.env.SystemRoot; // Windows needs it to start programs
-    const command = manifest.run.command.startsWith('./') ? join(dir, manifest.run.command) : manifest.run.command;
+    let command = manifest.run.command.startsWith('./') ? join(dir, manifest.run.command) : manifest.run.command;
+    let argv = manifest.run.args;
+    const iso = this.detectIsolation();
+    if (iso.mode === 'bwrap') {
+      const pathDirs = env.PATH.split(':').filter(Boolean);
+      argv = bwrapArgs({ dir, home, hide: [homedir(), this.env.HOME, this.dataDir, ...this.hide], outputs, network, pathDirs, command, args: manifest.run.args });
+      command = 'bwrap';
+    } else if (iso.required) {
+      return { ok: false, error: 'Extensions are set to run only in a sandbox, and no sandbox is available on this computer.', bytes: 0 };
+    }
     return new Promise((resolve) => {
       let child;
-      try { child = spawn(command, manifest.run.args, { cwd: dir, env, shell: false, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }); } catch (err) { resolve({ ok: false, error: `Could not start: ${err.message}`, bytes: 0 }); return; }
+      try { child = spawn(command, argv, { cwd: dir, env, shell: false, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] }); } catch (err) { resolve({ ok: false, error: `Could not start: ${err.message}`, bytes: 0 }); return; }
       const chunks = [];
       let bytes = 0;
       let err = '';
       let done = false;
-      const finish = (r) => { if (done) return; done = true; clearTimeout(timer); try { child.kill('SIGKILL'); } catch { /* gone */ } resolve({ bytes, ...r }); };
+      const finish = (r) => { if (done) return; done = true; clearTimeout(timer); try { child.kill('SIGKILL'); } catch { /* gone */ } resolve({ bytes, sandboxed: iso.mode === 'bwrap', ...r }); };
       const timer = setTimeout(() => finish({ ok: false, error: `Stopped after ${manifest.limits.timeoutMs / 1000} s (time limit).` }), manifest.limits.timeoutMs);
       child.on('error', (e2) => finish({ ok: false, error: e2.code === 'ENOENT' ? `Program not found: ${manifest.run.command}` : `Could not start: ${e2.message}` }));
       child.stdout.on('data', (c) => {

@@ -1,10 +1,11 @@
 import http from 'node:http';
 import { execFile } from 'node:child_process';
 import { createReadStream } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join, extname, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual, randomUUID } from 'node:crypto';
 import { GitHubClient } from './github.js';
 import { GhAuth, missingScopes, REQUIRED_SCOPES } from './ghauth.js';
 import { JobManager } from './jobs.js';
@@ -83,8 +84,9 @@ export function createApp(opts = {}) {
   const dataDir = env.DATA_DIR || join(ROOT, 'data');
   const extensions = opts.extensions || new ExtensionHost({
     dirs: [{ path: join(ROOT, 'extensions'), source: 'builtin' }, { path: join(dataDir, 'extensions'), source: 'user' }],
-    dataDir, env,
+    dataDir, env, samplesDir: join(ROOT, 'extension-samples'), hide: [env.GH_CONFIG_DIR].filter(Boolean),
   });
+  const extensionList = async () => ({ ...extensions.list(), userDir: join(dataDir, 'extensions'), gallery: await extensions.gallery() });
   const extensionsReady = extensions.load().catch(() => {});
 
   const clients = new Set();
@@ -216,11 +218,31 @@ export function createApp(opts = {}) {
     }
     if (pathname === '/api/extensions' && req.method === 'GET') {
       await extensionsReady;
-      return json(res, 200, { ...extensions.list(), userDir: join(dataDir, 'extensions') });
+      return json(res, 200, await extensionList());
     }
     if (pathname === '/api/extensions/rescan' && req.method === 'POST') {
       await extensions.scan();
-      return json(res, 200, { ...extensions.list(), userDir: join(dataDir, 'extensions') });
+      return json(res, 200, await extensionList());
+    }
+    if (pathname === '/api/extensions/install' && req.method === 'POST') {
+      await extensionsReady;
+      const b = await body(req);
+      return json(res, 200, await extensions.installSample(b.sample));
+    }
+    if (pathname === '/api/extensions/upload' && req.method === 'POST') {
+      await extensionsReady;
+      const chunks = [];
+      let size = 0;
+      for await (const c of req) { size += c.length; if (size > 2 * 1024 * 1024) return json(res, 413, { error: 'The zip is larger than 2 MB.' }); chunks.push(c); }
+      const tmpZip = join(tmpdir(), `mac-ext-${randomUUID()}.zip`);
+      await writeFile(tmpZip, Buffer.concat(chunks));
+      try { return json(res, 200, await extensions.installZip(tmpZip)); } finally { await rm(tmpZip, { force: true }).catch(() => {}); }
+    }
+    const xd = pathname.match(/^\/api\/extensions\/([a-z0-9-]{2,40})$/);
+    if (xd && req.method === 'DELETE') {
+      await extensionsReady;
+      await extensions.uninstall(xd[1]);
+      return json(res, 200, await extensionList());
     }
     const lg = pathname.match(/^\/api\/builds\/([\w-]+)\/log$/);
     if (lg && req.method === 'GET') {

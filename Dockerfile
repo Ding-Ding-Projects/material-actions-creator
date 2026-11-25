@@ -2,7 +2,7 @@
 FROM node:22-alpine
 
 # GitHub CLI powers the assisted device-code sign-in.
-RUN apk add --no-cache github-cli tini
+RUN apk add --no-cache github-cli tini bubblewrap
 
 ENV NODE_ENV=production \
     PORT=8080 \
@@ -15,6 +15,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY src ./src
 COPY public ./public
 COPY extensions ./extensions
+COPY extension-samples ./extension-samples
 ARG MAC_COMMIT=""
 ARG MAC_BUILT_AT=""
 ENV MAC_COMMIT=$MAC_COMMIT MAC_BUILT_AT=$MAC_BUILT_AT

@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { ExtensionHost, validateManifest, cleanResult, ManifestError } from '../src/extensions.js';
+import { ExtensionHost, validateManifest, cleanResult, ManifestError, bwrapArgs } from '../src/extensions.js';
+import { makeZip } from './helpers.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const base = { manifestVersion: 1, id: 'demo', name: 'Demo', version: '1.0.0', run: { command: 'node', args: ['main.mjs'] }, hooks: ['command'], permissions: [] };
@@ -169,7 +170,7 @@ test('shipped extensions and author samples have valid manifests and really run'
   await cp(join(ROOT, 'extension-samples'), user, { recursive: true });
   const h = await new ExtensionHost({ dirs: [{ path: join(ROOT, 'extensions'), source: 'builtin' }, { path: user, source: 'user' }], dataDir: join(root, 'data') }).load();
   assert.deepEqual(h.list().broken, []);
-  assert.deepEqual(h.list().extensions.map((e) => e.id).sort(), ['build-summary', 'checksums', 'hello-shell', 'word-count-python', 'workflow-lint']);
+  assert.deepEqual(h.list().extensions.map((e) => e.id).sort(), ['build-summary', 'checksums', 'hello-shell', 'release-notes', 'size-budget', 'word-count-python', 'workflow-lint']);
 
   const file = join(root, 'out.bin');
   await writeFile(file, 'abc');
@@ -193,4 +194,96 @@ test('shipped extensions and author samples have valid manifests and really run'
     assert.equal((await h.run('word-count-python', 'command', { input: 'one two\nthree' })).result.title, '3 words');
   } else t.diagnostic('python3 not installed: Python sample not run');
   assert.ok((await readFile(join(root, 'data', 'extensions.json'), 'utf8')).includes('lastRun'));
+});
+
+test('gallery: add a bundled sample, upload a zip, reject unsafe zips, remove', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ext-gal-'));
+  const user = join(root, 'data', 'extensions');
+  const h = await new ExtensionHost({ dirs: [{ path: join(ROOT, 'extensions'), source: 'builtin' }, { path: user, source: 'user' }], dataDir: join(root, 'data'), samplesDir: join(ROOT, 'extension-samples') }).load();
+  const gallery = await h.gallery();
+  assert.deepEqual(gallery.map((g) => g.id), ['hello-shell', 'release-notes', 'size-budget', 'word-count-python']);
+  assert.ok(gallery.every((g) => g.installed === false));
+  const added = await h.installSample('size-budget');
+  assert.equal(added.source, 'user');
+  assert.equal(added.enabled, false, 'added extensions start off');
+  assert.equal((await h.gallery()).find((g) => g.id === 'size-budget').installed, true);
+  await assert.rejects(h.installSample('../extensions/checksums'), /Unknown sample/);
+  await assert.rejects(h.installSample('nope'), /Unknown sample/);
+
+  const manifest = { ...base, id: 'zipped', name: 'Zipped' };
+  const zip = async (entries) => { const p = join(root, `u-${Math.random()}.zip`); await writeFile(p, makeZip(entries)); return p; };
+  const code = Buffer.from(`${READ}console.log(JSON.stringify({ok:true,result:{title:'from zip'}}))`);
+  const flat = await h.installZip(await zip([{ name: 'manifest.json', data: Buffer.from(JSON.stringify(manifest)) }, { name: 'main.mjs', data: code }]));
+  assert.equal(flat.id, 'zipped');
+  await h.configure('zipped', { grant: [], enabled: true });
+  assert.equal((await h.run('zipped', 'command')).result.title, 'from zip');
+  // A zip with one top folder works too, and replaces the earlier copy without losing consent.
+  await h.installZip(await zip([{ name: 'zipped-1.0/manifest.json', data: Buffer.from(JSON.stringify({ ...manifest, version: '1.0.1' })) }, { name: 'zipped-1.0/main.mjs', data: code }]));
+  assert.equal(h.view('zipped').version, '1.0.1');
+  assert.equal(h.view('zipped').enabled, true);
+
+  await assert.rejects(async () => h.installZip(await zip([{ name: 'manifest.json', data: Buffer.from(JSON.stringify(manifest)) }, { name: '../escape.txt', data: Buffer.from('x') }])), /Unsafe path/);
+  await assert.rejects(async () => h.installZip(await zip([{ name: 'readme.txt', data: Buffer.from('x') }])), /no valid manifest/);
+  await assert.rejects(async () => h.installZip(await zip([{ name: 'manifest.json', data: Buffer.from(JSON.stringify({ ...manifest, id: 'checksums' })) }])), /built-in/);
+  await assert.rejects(async () => h.installZip(await zip([{ name: 'manifest.json', data: Buffer.from(JSON.stringify({ ...manifest, permissions: ['everything'] })) }])), /permissions may only contain/);
+  const notZip = join(root, 'not.zip'); await writeFile(notZip, 'hello');
+  await assert.rejects(h.installZip(notZip), /not a zip|empty/);
+
+  await h.uninstall('zipped');
+  assert.equal(h.view('zipped'), null);
+  await assert.rejects(h.uninstall('checksums'), /cannot be removed/);
+});
+
+test('sandbox arguments hide home and app data, and only open what was granted', () => {
+  const a = bwrapArgs({ dir: '/opt/app/extensions/x', home: '/data/extension-data/x', hide: ['/home/me', '/home/me', '/data', '/', undefined], outputs: ['/data/b1/files/out.bin'], pathDirs: ['/usr/bin', '/home/me/.nvm/versions/node/v22/bin'], command: 'node', args: ['main.mjs'] });
+  const s = a.join(' ');
+  assert.ok(a.includes('--unshare-all') && !a.includes('--share-net'), 'no network by default');
+  assert.match(s, /--tmpfs \/home\/me --tmpfs \/data /);
+  assert.ok(!/--tmpfs \/ /.test(s), 'never hides the root');
+  assert.match(s, /--ro-bind \/home\/me\/\.nvm\/versions\/node\/v22 \/home\/me\/\.nvm\/versions\/node\/v22/);
+  assert.ok(s.indexOf('--tmpfs /data') < s.indexOf('--bind /data/extension-data/x'), 'own folder is put back after hiding app data');
+  assert.match(s, /--ro-bind \/data\/b1\/files\/out\.bin \/data\/b1\/files\/out\.bin/);
+  assert.deepEqual(a.slice(-3), ['--', 'node', 'main.mjs']);
+  assert.ok(bwrapArgs({ dir: '/x', home: '/y', network: true, command: 'sh' }).includes('--share-net'));
+});
+
+test('isolation setting: off never sandboxes, require refuses to run without one', async () => {
+  const mk = async (mode) => {
+    const root = await mkdtemp(join(tmpdir(), 'ext-iso-'));
+    await makeExt(join(root, 'user'), base, `${READ}console.log(JSON.stringify({ok:true,result:{}}))`);
+    const h = await new ExtensionHost({ dirs: [{ path: join(root, 'user'), source: 'user' }], dataDir: join(root, 'data'), env: { PATH: process.env.PATH, MAC_EXTENSION_ISOLATION: mode } }).load();
+    await h.configure('demo', { grant: [], enabled: true });
+    return h;
+  };
+  const off = await mk('off');
+  assert.deepEqual(off.detectIsolation(), { mode: 'none', reason: 'off', required: false });
+  assert.equal((await off.run('demo', 'command')).sandboxed, false);
+  const req = await mk('require');
+  const iso = req.detectIsolation();
+  const run = await req.run('demo', 'command');
+  if (iso.mode === 'bwrap') { assert.equal(run.ok, true); assert.equal(run.sandboxed, true); } else assert.match(run.error, /only in a sandbox/);
+});
+
+test('when a sandbox is available it really hides the home folder and the network', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'ext-box-'));
+  const fakeHome = join(root, 'home');
+  await mkdir(join(fakeHome, '.config'), { recursive: true });
+  await writeFile(join(fakeHome, '.config', 'token'), 'sign-in-value');
+  const probe = `${READ}import {readFileSync,writeFileSync} from 'node:fs';import net from 'node:net';
+    const read=(p)=>{try{return readFileSync(p,'utf8')}catch(e){return 'ERR:'+e.code}};
+    const write=(p)=>{try{writeFileSync(p,'x');return 'ok'}catch(e){return 'ERR:'+e.code}};
+    const netOk=await new Promise(r=>{const s=net.connect({host:'1.1.1.1',port:53,timeout:1500});s.on('connect',()=>{s.destroy();r('connected')});s.on('error',e=>r('ERR:'+e.code));s.on('timeout',()=>{s.destroy();r('timeout')})});
+    console.log(JSON.stringify({ok:true,result:{summary:JSON.stringify({token:read(${JSON.stringify(join(fakeHome, '.config', 'token'))}),own:write(process.env.MAC_EXTENSION_DATA+'/note'),sys:write('/usr/mac-probe'),net:netOk})}}))`;
+  await makeExt(join(root, 'user'), base, probe);
+  const h = await new ExtensionHost({ dirs: [{ path: join(root, 'user'), source: 'user' }], dataDir: join(root, 'data'), hide: [fakeHome], env: { PATH: process.env.PATH } }).load();
+  if (process.env.MAC_REQUIRE_SANDBOX_TEST) assert.equal(h.detectIsolation().mode, 'bwrap', `sandbox required for this run: ${h.detectIsolation().reason}`);
+  if (h.detectIsolation().mode !== 'bwrap') { t.skip(`no sandbox here (${h.detectIsolation().reason})`); return; }
+  await h.configure('demo', { grant: [], enabled: true });
+  const r = await h.run('demo', 'command');
+  assert.equal(r.ok, true, r.error);
+  const seen = JSON.parse(r.result.summary);
+  assert.equal(seen.token, 'ERR:ENOENT', 'home folder is hidden');
+  assert.equal(seen.own, 'ok', 'own data folder is writable');
+  assert.match(seen.sys, /^ERR:/, 'system is read-only');
+  assert.match(seen.net, /^ERR:/, 'no network without the permission');
 });
