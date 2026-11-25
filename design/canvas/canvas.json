@@ -53,6 +53,18 @@
   {
    "id": "linux",
    "name": "Linux — launcher and self-check"
+  },
+  {
+   "id": "workspace",
+   "name": "Workspace — dock, live log, timing"
+  },
+  {
+   "id": "recipes",
+   "name": "Recipes — saved and scheduled builds"
+  },
+  {
+   "id": "tools",
+   "name": "Tools — Base64, converter, JSON studio"
   }
  ],
  "boards": {
@@ -195,6 +207,46 @@
    "title": "run-linux.sh — one command, self-check",
    "page": "linux",
    "expand": "fill"
+  },
+  "Workspace.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Dockable workspace — runs, live log, timing",
+   "page": "workspace",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Gallery.dc.html": {
+   "x": 1940,
+   "y": 0,
+   "w": 1440,
+   "h": 860,
+   "title": "Extension gallery, isolation and run actions",
+   "page": "extensions",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Recipes.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 760,
+   "title": "Recipes — run again, on a schedule",
+   "page": "recipes",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Tools.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 780,
+   "title": "Tools — three local tools",
+   "page": "tools",
+   "expand": "fill",
+   "is_interactive": true
   }
  },
  "order": [
@@ -212,7 +264,11 @@
   "Vocab.dc.html",
   "Records.dc.html",
   "Extensions.dc.html",
-  "Linux.dc.html"
+  "Linux.dc.html",
+  "Workspace.dc.html",
+  "Gallery.dc.html",
+  "Recipes.dc.html",
+  "Tools.dc.html"
  ],
  "notes": {
   "title-workflows": {
@@ -392,7 +448,7 @@
    "y": -300,
    "text": "Extensions — manager and consent",
    "kind": "title1",
-   "maxW": 1820,
+   "maxW": 3760,
    "page": "extensions"
   },
   "title-linux": {
@@ -416,6 +472,58 @@
    "w": 340,
    "text": "The Linux run path: scripts/run-linux.sh checks Node, the GitHub CLI, folders and the port, starts the server, and can install a systemd user service. Tweaks: accent, motion, stage (ready/missing-gh). Drawn before the code. Built since and run on Linux. Not verified: starting the service under a real systemd user session.",
    "page": "linux"
+  },
+  "title-workspace": {
+   "x": 0,
+   "y": -300,
+   "text": "Workspace — dock, live log, timing",
+   "kind": "title1",
+   "maxW": 1820,
+   "page": "workspace"
+  },
+  "title-recipes": {
+   "x": 0,
+   "y": -300,
+   "text": "Recipes — saved and scheduled builds",
+   "kind": "title1",
+   "maxW": 1820,
+   "page": "recipes"
+  },
+  "title-tools": {
+   "x": 0,
+   "y": -300,
+   "text": "Tools — Base64, converter, JSON studio",
+   "kind": "title1",
+   "maxW": 1820,
+   "page": "tools"
+  },
+  "note-Workspace": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "Dockable workspace: runs on the left, the selected run's step log and a where-the-time-went chart in the middle, outputs and extension results on the right. Try: pick a run. Tweaks: accent, motion, layout (three/two). Drawn before the code. Built since: public/js/views/workspace.js on dockview. The real panels drag, split and float; this still board only describes that.",
+   "page": "workspace"
+  },
+  "note-Gallery": {
+   "x": 3420,
+   "y": 0,
+   "w": 340,
+   "text": "Extension gallery: add a bundled sample or drop a .zip; a card that says plainly whether extensions are sandboxed on this computer; and running an extension on a finished run. Try: Add. Tweaks: accent, motion, isolation (sandboxed/none). Drawn before the code. Built since; in the app the run action lives in the Workspace's Extension results panel.",
+   "page": "extensions"
+  },
+  "note-Recipes": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "Recipes: a saved Workflows form with a name, mode, chips for what runs, a schedule and the last result; Run now starts it. Try: Run now. Tweaks: accent, motion, stage (recipes/empty). Drawn before the code. Built since: src/recipes.js and public/js/views/recipes.js. Schedules need the app running.",
+   "page": "recipes"
+  },
+  "note-Tools": {
+   "x": 1480,
+   "y": 0,
+   "w": 340,
+   "text": "The Tools tab: Base64, converter and JSON studio as input to output, with the notes the app shows (lossy flattening; built-in generator, not quicktype). Try: the three tabs. Tweaks: accent, motion, tool. This board was drawn after the code shipped. The real screens have more controls (files, images, tree editor).",
+   "page": "tools"
   }
  },
  "designSystems": []

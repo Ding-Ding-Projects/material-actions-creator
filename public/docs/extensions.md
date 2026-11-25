@@ -4,12 +4,14 @@ An extension is a folder with a `manifest.json` and a program in any language. T
 
 ## Try the samples first
 
-Two runnable samples ship in the repository under `extension-samples/`:
+Four runnable samples ship under `extension-samples/` and in the Extensions tab's gallery:
 
 - `hello-shell` — eight lines of POSIX `sh`.
 - `word-count-python` — Python 3, takes text you type.
+- `release-notes` — drafts release notes from a finished build.
+- `size-budget` — warns when an output is over a size budget.
 
-Copy one into your extensions folder (the path is shown at the bottom of the **Extensions** tab), press **Rescan**, switch it on and allow it. The three built-in extensions in `extensions/` (`checksums`, `workflow-lint`, `build-summary`) are also short enough to read as examples.
+Press **Add** in the gallery (or copy a folder into your extensions folder and press **Rescan**), then switch it on and allow it. The three built-in extensions in `extensions/` (`checksums`, `workflow-lint`, `build-summary`) are also short enough to read as examples.
 
 ## manifest.json
 
@@ -58,6 +60,7 @@ Permissions decide what the app puts in the request. Anything not granted is sim
 | `build:read` | `build`: title, mode, runner, status, timing, stage names and states, output count. |
 | `outputs:read` | `outputs`: name, size and local path of each decrypted output file. |
 | `workflow:read` | `workflow.yaml`: the generated workflow text. |
+| `network` | Nothing in the payload. Lets a sandboxed extension reach the network. |
 
 The first time you switch an extension on, and whenever a new version asks for a permission you have not allowed, the app shows exactly what is requested and keeps the extension off until you decide. Built-in extensions start on with the permissions they shipped with.
 
@@ -88,7 +91,24 @@ To report a failure, reply `{"ok":false,"error":"what went wrong"}`.
 - The environment contains only `PATH`, `LANG`, `HOME`, `MAC_EXTENSION_ID`, `MAC_EXTENSION_DATA` and `MAC_PROTOCOL`. No tokens, keys or access key are passed. `HOME` and `MAC_EXTENSION_DATA` point at a folder that belongs to the extension, where it may keep files.
 - The temporary repository name, its owner and every key stay out of the payload.
 - Extension text is shown as text or through the app's safe Markdown renderer, never as HTML.
-- This is **not** an operating-system sandbox. An extension is a program running as you. Only add extensions you trust.
+- Without the Linux sandbox described below, an extension is a program running as you. Only add extensions you trust.
+
+## Adding and removing
+
+- **Gallery** — the Extensions tab lists the bundled samples; **Add** copies one into your extensions folder, switched off.
+- **Zip** — drop a `.zip` on the gallery's drop area or choose a file. The manifest may be at the top level or inside one top folder. Limits: 2 MB zipped, 5 MB and 200 files unpacked. Paths that leave the folder are refused. Uploading the same id again replaces the files and keeps your earlier answers, unless the new version asks for more.
+- **Remove** deletes an added extension's files. Built-in extensions can only be switched off.
+
+## The sandbox on Linux
+
+When [bubblewrap](https://github.com/containers/bubblewrap) is installed and allowed to start, every extension runs inside it:
+
+- the system is read-only;
+- your home folder, the app's data folder and the GitHub CLI's sign-in folder are replaced by empty folders;
+- the extension's own folder is readable, its data folder is writable, and output files are readable only with `outputs:read`;
+- there is no network unless you allowed `network`.
+
+The Extensions tab says which mode this computer is in, and each run is marked **sandboxed** when it was. `MAC_EXTENSION_ISOLATION` controls it: `auto` (default), `off`, or `require` (extensions refuse to run without a sandbox). On Windows, macOS, and inside most containers there is no sandbox and extensions run as ordinary programs.
 
 ## Test it without the app
 

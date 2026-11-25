@@ -90,7 +90,16 @@ Open http://localhost:8080 and click **Sign in with GitHub CLI**. The server run
 
 Without Docker: `npm start` (Node 22+, and `gh` on the `PATH` for the assisted sign-in).
 
-### Linux, without Docker
+### Linux packages
+
+Each [release](https://github.com/Ding-Ding-Projects/material-actions-creator/releases) carries a `.deb`, a tarball and an AppImage that ship their own Node.js. The release workflow installs and self-tests each one before publishing.
+
+```sh
+sudo dpkg -i material-actions-creator_<version>_amd64.deb
+material-actions-creator
+```
+
+### Linux, from a checkout
 
 ```sh
 scripts/run-linux.sh                    # checks the machine, installs dependencies, starts on 127.0.0.1:8080
@@ -110,7 +119,13 @@ An extension is a folder with a `manifest.json` and a program in any language. T
 - Samples for authors (`extension-samples/`): `hello-shell` (POSIX sh) and `word-count-python`.
 - Guide: **Docs → Writing an extension** in the app, or [`public/docs/extensions.md`](public/docs/extensions.md).
 
-Permissions decide what the app hands over; they are not an operating-system sandbox, so only add extensions you trust.
+On Linux with bubblewrap installed, extensions run sandboxed (read-only system, no home folder, no app data, no network unless allowed). Elsewhere permissions only decide what the app hands over, so only add extensions you trust.
+
+## Workspace and recipes
+
+The **Workspace** tab has dockable panels for runs, the step log, a timing chart, outputs and extension results. **Recipes** save the Workflows form so a build can be run again with one click, on a schedule, or with `mac recipe run <name>`.
+
+![Workspace](docs/screenshots/05-workspace.png)
 
 ### Configuration
 

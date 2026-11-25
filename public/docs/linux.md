@@ -2,7 +2,22 @@
 
 The app is a Node.js server with a web interface, so it runs on any Linux with Node.js 22 or newer. Docker is optional.
 
-## One command
+## Install a package
+
+Every release has three self-contained downloads that ship their own Node.js:
+
+```sh
+sudo dpkg -i material-actions-creator_<version>_amd64.deb
+material-actions-creator                 # same options as scripts/run-linux.sh
+systemctl --user enable --now material-actions-creator   # optional service
+```
+
+- `material-actions-creator-<version>-linux-x86_64.tar.gz` — unpack anywhere and run `material-actions-creator/bin/material-actions-creator`.
+- `Material_Actions_Creator-<version>-x86_64.AppImage` — make it executable and run it.
+
+`material-actions-creator cli …` runs the `mac` command line from the same package. Each package is installed or unpacked and self-tested by the release workflow before it is published.
+
+## From a checkout
 
 ```sh
 git clone https://github.com/Ding-Ding-Projects/material-actions-creator

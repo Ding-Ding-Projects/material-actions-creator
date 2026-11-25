@@ -1,6 +1,45 @@
 {
   "releases": [
     {
+      "version": "0.6.0",
+      "date": "2026-11-25",
+      "title": "Workspace, recipes and packages",
+      "changes": [
+        {
+          "type": "added",
+          "text": "Workspace tab with dockable panels: runs, step log, a where-the-time-went chart, outputs and extension results."
+        },
+        {
+          "type": "added",
+          "text": "Step timings are captured while a build runs, and the full job log is saved before the temporary repository is deleted."
+        },
+        {
+          "type": "added",
+          "text": "Recipes: save the Workflows form, run it again with one click or on a schedule, from the app or the mac command line."
+        },
+        {
+          "type": "added",
+          "text": "Extension gallery: add a bundled sample in one click, install from a zip, and remove added extensions."
+        },
+        {
+          "type": "added",
+          "text": "On Linux with bubblewrap, extensions run sandboxed: read-only system, no home folder, no app data, and no network unless allowed."
+        },
+        {
+          "type": "added",
+          "text": "Run any finished-build extension on a build from the Workspace."
+        },
+        {
+          "type": "added",
+          "text": "Every push to main publishes a release with a .deb, a tarball and an AppImage that ship their own Node.js and are self-tested first."
+        },
+        {
+          "type": "changed",
+          "text": "The dock panel library dockview-core 8.9.1 (MIT) is vendored with a pinned hash."
+        }
+      ]
+    },
+    {
       "version": "0.5.0",
       "date": "2026-11-25",
       "title": "Extensions and Linux",

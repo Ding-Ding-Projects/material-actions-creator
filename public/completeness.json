@@ -131,8 +131,9 @@
    "area": "Appearance and layout",
    "id": "live-charts",
    "title": "Live charts",
-   "status": "missing",
-   "note": "Run timing charts are not built."
+   "status": "partial",
+   "note": "Step timing chart that grows while a run is in progress; no other charts.",
+   "proof": "public/js/views/workspace.js"
   },
   {
    "area": "Appearance and layout",
@@ -420,8 +421,9 @@
    "area": "Records and messages",
    "id": "dockview-workspace",
    "title": "Dockable workspace",
-   "status": "missing",
-   "note": "Not built; tabs only."
+   "status": "done",
+   "note": "Workspace tab built on dockview: drag, split, stack and float panels; layout remembered.",
+   "proof": "public/js/views/workspace.js"
   },
   {
    "area": "Records and messages",
@@ -509,7 +511,7 @@
    "id": "progress-recovery",
    "title": "Progress where it started, recovery where it broke",
    "status": "done",
-   "note": "Stage progress per run; journal resume after restarts.",
+   "note": "Stage and step progress per run, saved logs, journal resume after restarts.",
    "proof": "src/jobs.js"
   },
   {
@@ -716,15 +718,15 @@
    "id": "bundled-dependencies",
    "title": "Bundled dependencies",
    "status": "done",
-   "note": "The Docker image bundles Node, dependencies and the GitHub CLI.",
-   "proof": "Dockerfile"
+   "note": "The Docker image and the Linux packages bundle Node.js, dependencies and extensions.",
+   "proof": "scripts/build-packages.sh"
   },
   {
    "area": "Build and install",
    "id": "squirrel-installer",
    "title": "Squirrel.Windows installer",
    "status": "missing",
-   "note": "Not built; web app and Docker image only."
+   "note": "Not built. Linux has .deb, tarball and AppImage; there is no Windows installer."
   },
   {
    "area": "Build and install",
@@ -752,22 +754,25 @@
    "area": "Release pipeline",
    "id": "release-workflow",
    "title": "A release on every push",
-   "status": "missing",
-   "note": "CI runs on every push; no release is published."
+   "status": "done",
+   "note": "Every push to main publishes a release after installing and self-testing each package.",
+   "proof": ".github/workflows/release.yml"
   },
   {
    "area": "Release pipeline",
    "id": "release-timing",
    "title": "Workflow timing in release notes",
-   "status": "missing",
-   "note": "Not built."
+   "status": "done",
+   "note": "Start, finish and end-to-end time are appended to the release notes by the workflow.",
+   "proof": ".github/workflows/release.yml"
   },
   {
    "area": "Release pipeline",
    "id": "release-line-counts",
    "title": "Line counts in releases",
-   "status": "missing",
-   "note": "Not built."
+   "status": "done",
+   "note": "Line counts per part are counted in the workflow and written into the notes.",
+   "proof": ".github/workflows/release.yml"
   },
   {
    "area": "Release pipeline",
@@ -780,8 +785,9 @@
    "area": "Release pipeline",
    "id": "dim-sum-code-names",
    "title": "Dim sum release code names",
-   "status": "missing",
-   "note": "Not built."
+   "status": "partial",
+   "note": "Each release gets a dim sum code name; the app itself does not show one.",
+   "proof": ".github/workflows/release.yml"
   },
   {
    "area": "Release pipeline",

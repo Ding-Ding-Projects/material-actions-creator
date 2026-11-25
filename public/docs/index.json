@@ -16,6 +16,11 @@
       "file": "workflows.md"
     },
     {
+      "id": "workspace",
+      "title": "Workspace, logs and recipes",
+      "file": "workspace.md"
+    },
+    {
       "id": "recovery",
       "title": "Restarts and recovery",
       "file": "recovery.md"
